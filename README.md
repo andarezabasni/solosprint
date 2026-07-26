@@ -34,11 +34,6 @@ Output: `build/app/outputs/flutter-apk/app-release.apk`
 - geolocator + flutter_map
 - pedometer
 
-## Support
-
-- Saweria: https://saweria.co/andreza09
-- PayPal: https://www.paypal.com/paypalme/andreza110
-
 ## License
 
 MIT
