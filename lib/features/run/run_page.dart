@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/language_provider.dart';
 import '../../shared/localization.dart';
 import 'run_provider.dart';
+import 'route_planner.dart';
 
 
 class RunPage extends StatelessWidget {
@@ -64,6 +65,40 @@ class _RunPageBody extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF6B35),
                 foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: 200,
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                final initPos = provider.initialPosition;
+                final result = await Navigator.push<Map<String, dynamic>>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => RoutePlanner(initialPosition: initPos),
+                  ),
+                );
+                if (result != null && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Route: ${result['distance'].toStringAsFixed(1)} km'
+                        ', ~${result['estMinutes']} min est.',
+                      ),
+                    ),
+                  );
+                }
+              },
+              icon: const Icon(Icons.route, size: 20),
+              label: const Text('Plan Route'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFFF6B35),
+                side: const BorderSide(color: Color(0xFFFF6B35)),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(28),
                 ),
