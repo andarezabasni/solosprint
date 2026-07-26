@@ -4,6 +4,7 @@ import '../../core/theme_provider.dart';
 import '../../core/language_provider.dart';
 import '../../shared/localization.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/backup_service.dart';
 import '../../shared/widgets/app_logo.dart';
 import '../../shared/demo_data.dart';
 import 'goals_page.dart';
@@ -69,6 +70,30 @@ class SettingsPage extends StatelessWidget {
                     ),
                   ),
                   onTap: () => _showLanguageDialog(context),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Data management
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.backup_outlined, color: Color(0xFFFF6B35)),
+                  title: const Text('Backup Data'),
+                  subtitle: const Text('Export all data as Hive files'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => BackupService.exportData(context),
+                ),
+                const Divider(height: 1, indent: 16, endIndent: 16),
+                ListTile(
+                  leading: const Icon(Icons.restore_outlined, color: Color(0xFFFF6B35)),
+                  title: const Text('Restore Data'),
+                  subtitle: const Text('Import from backup files'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => BackupService.restoreData(context),
                 ),
               ],
             ),

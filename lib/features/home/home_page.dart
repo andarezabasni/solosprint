@@ -8,7 +8,7 @@ import '../../shared/widgets/weekly_summary.dart';
 import '../../shared/widgets/app_logo.dart';
 import '../settings/settings_page.dart';
 import 'step_provider.dart';
-import 'onboarding_dialog.dart';
+import 'setup_guide.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -51,10 +51,9 @@ class _HomePageState extends State<HomePage> {
   void _checkOnboarding() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (ActivityDatabase.isFirstLaunch && mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => const OnboardingDialog(),
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SetupGuide()),
         );
       }
     });
