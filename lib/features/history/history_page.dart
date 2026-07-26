@@ -225,8 +225,12 @@ class _ActivityDetailPage extends StatelessWidget {
                     children: [
                       TileLayer(
                         urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                        subdomains: const ['a', 'b', 'c', 'd'],
                         userAgentPackageName: 'com.solosprint.solosprint',
+                        fallbackUrl:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        maxZoom: 19,
                       ),
                       PolylineLayer(
                         polylines: segments.map((seg) {

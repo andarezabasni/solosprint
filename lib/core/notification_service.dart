@@ -41,6 +41,16 @@ class NotificationService {
         enableVibration: true,
       ),
     );
+    // Run tracking channel
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'run_tracking',
+        'Run Tracking',
+        importance: Importance.low,
+        playSound: false,
+        enableVibration: false,
+      ),
+    );
   }
 
   /// Check step target and show appropriate notification.

@@ -75,8 +75,11 @@ class ClassicTemplate extends StatelessWidget {
                       ),
                       children: [
                         TileLayer(
-                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                          subdomains: const ['a', 'b', 'c', 'd'],
                           userAgentPackageName: 'com.solosprint.solosprint',
+                          fallbackUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          maxZoom: 19,
                         ),
                         // Render as individual segment polylines for reliability
                         PolylineLayer(
