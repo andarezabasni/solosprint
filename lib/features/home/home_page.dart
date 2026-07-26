@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme.dart';
 import '../../core/database/activity_database.dart';
-import '../../shared/widgets/stat_card.dart';
+import '../../shared/widgets/weekly_summary.dart';
 import 'step_provider.dart';
+import 'onboarding_dialog.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -15,18 +17,25 @@ class _HomePageState extends State<HomePage> {
   double _weekDistance = 0;
   int _weekDuration = 0;
   int _weekRuns = 0;
+  DateTime _currentMonday = DateTime.now();
 
   @override
   void initState() {
     super.initState();
+    _resetToCurrentWeek();
+    _checkOnboarding();
+  }
+
+  void _resetToCurrentWeek() {
+    final now = DateTime.now();
+    _currentMonday = now.subtract(Duration(days: now.weekday - 1));
     _loadWeekStats();
   }
 
   void _loadWeekStats() {
-    final now = DateTime.now();
-    final weekStart = now.subtract(Duration(days: now.weekday - 1));
-    final start = DateTime(weekStart.year, weekStart.month, weekStart.day);
-    final end = now.add(const Duration(days: 1));
+    final end = _currentMonday
+        .add(const Duration(days: 7));
+    final start = DateTime(_currentMonday.year, _currentMonday.month, _currentMonday.day);
 
     setState(() {
       _weekDistance = ActivityDatabase.getTotalDistance(start, end);
@@ -35,12 +44,50 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  void _checkOnboarding() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (ActivityDatabase.isFirstLaunch && mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const OnboardingDialog(),
+        );
+      }
+    });
+  }
+
+  void _previousWeek() {
+    setState(() {
+      _currentMonday = _currentMonday.subtract(const Duration(days: 7));
+      _loadWeekStats();
+    });
+  }
+
+  void _nextWeek() {
+    setState(() {
+      _currentMonday = _currentMonday.add(const Duration(days: 7));
+      _loadWeekStats();
+    });
+  }
+
+  bool get _isCurrentWeek {
+    final now = DateTime.now();
+    final todayMonday = now.subtract(Duration(days: now.weekday - 1));
+    return _currentMonday.year == todayMonday.year &&
+        _currentMonday.month == todayMonday.month &&
+        _currentMonday.day == todayMonday.day;
+  }
+
   @override
   Widget build(BuildContext context) {
     final stepProvider = context.watch<StepProvider>();
-    final weekDistanceGoal = ActivityDatabase.getGoal('weekly_distance');
-    final weekDurationGoal = ActivityDatabase.getGoal('weekly_duration');
-    final weekRunsGoal = ActivityDatabase.getGoal('weekly_runs');
+    final stepTarget = ActivityDatabase.getGoal('daily_step_target',
+        defaultValue: 8000);
+    final distTarget =
+        ActivityDatabase.getGoal('daily_dist_target', defaultValue: 5.0);
+    final weekLabel = _isCurrentWeek
+        ? 'This Week'
+        : '${_currentMonday.day}/${_currentMonday.month} - ${_currentMonday.add(const Duration(days: 6)).day}/${_currentMonday.add(const Duration(days: 6)).month}';
 
     return Scaffold(
       appBar: AppBar(
@@ -50,6 +97,10 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.refresh),
             onPressed: _loadWeekStats,
           ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () {},
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -57,79 +108,46 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Today',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: StatCard(
-                    icon: Icons.directions_walk,
-                    label: 'Steps',
-                    value: '${stepProvider.todaySteps}',
-                    unit: 'steps',
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: StatCard(
-                    icon: Icons.route,
-                    label: 'Distance',
-                    value: '0.0',
-                    unit: 'km',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: StatCard(
-                    icon: Icons.timer_outlined,
-                    label: 'Duration',
-                    value: '0',
-                    unit: 'min',
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: StatCard(
-                    icon: Icons.speed,
-                    label: 'Pace',
-                    value: '--',
-                    unit: '/km',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.directions_run, size: 28),
-                label: const Text(
-                  'Start Run',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF6B35),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+            // Daily summary banner
+            Card(
+              color: AppTheme.accent,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _bannerStat(
+                        '${stepProvider.todaySteps}',
+                        'Steps',
+                        stepTarget.toInt()),
+                    _bannerStat('0.0', 'Distance', 'km'),
+                    _bannerStat(
+                        stepProvider.status == 'walking' ? 'Walking' : '--',
+                        'Status',
+                        ''),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+
+            const SizedBox(height: 20),
+
+            // Weekly Summary (Apple Fitness style)
+            WeeklySummary(
+              dailySteps: stepProvider.getWeekSteps(_currentMonday),
+              stepTarget: stepTarget,
+              weekLabel: weekLabel,
+              onPreviousWeek: _previousWeek,
+              onNextWeek: _nextWeek,
+              hasPreviousWeek: true,
+              hasNextWeek: !_isCurrentWeek,
+            ),
+
+            const SizedBox(height: 20),
+
+            // This Week stats
             Text(
-              'This Week',
+              _isCurrentWeek ? 'This Week' : 'Week Stats',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -143,20 +161,18 @@ class _HomePageState extends State<HomePage> {
                     _buildWeekStat(
                       'Distance',
                       '${_weekDistance.toStringAsFixed(1)} km',
-                      weekDistanceGoal > 0 ? '${weekDistanceGoal.toStringAsFixed(1)} km goal' : 'No goal set',
+                      distTarget > 0
+                          ? '${(distTarget * 7).toStringAsFixed(1)} km weekly goal'
+                          : '',
                     ),
                     const Divider(),
                     _buildWeekStat(
                       'Duration',
                       '$_weekDuration min',
-                      weekDurationGoal > 0 ? '${weekDurationGoal.toStringAsFixed(0)} min goal' : 'No goal set',
+                      '',
                     ),
                     const Divider(),
-                    _buildWeekStat(
-                      'Runs',
-                      '$_weekRuns',
-                      weekRunsGoal > 0 ? '${weekRunsGoal.toStringAsFixed(0)} runs goal' : 'No goal set',
-                    ),
+                    _buildWeekStat('Runs', '$_weekRuns', ''),
                   ],
                 ),
               ),
@@ -164,6 +180,31 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _bannerStat(String value, String label, dynamic target) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        ),
+        if (target is int && target > 0)
+          Text(
+            '/ $target',
+            style: const TextStyle(color: Colors.white38, fontSize: 10),
+          ),
+      ],
     );
   }
 
@@ -180,8 +221,10 @@ class _HomePageState extends State<HomePage> {
               Text(current,
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 16)),
-              Text(goal,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+              if (goal.isNotEmpty)
+                Text(goal,
+                    style:
+                        TextStyle(color: Colors.grey[600], fontSize: 12)),
             ],
           ),
         ],

@@ -11,23 +11,52 @@ class StepProvider extends ChangeNotifier {
   StreamSubscription<StepCount>? _stepSubscription;
   StreamSubscription<PedestrianStatus>? _statusSubscription;
   Timer? _saveTimer;
+  String _todayKey = '';
 
-  static const _maxStepRate = 4; // max 4 steps/second (≈running 15 km/h)
-  static const _minStepRate = 0.5; // min 1 step/2 seconds (very slow walk)
-
+  static const _maxStepRate = 4;
+  static const _minStepRate = 0.5;
   int _consecutiveValid = 0;
 
   int get todaySteps => _todaySteps;
   String get status => _status;
 
+  /// Get daily steps for any date key ('YYYY-MM-DD').
+  int getStepsForDay(String dateKey) => ActivityDatabase.getDailySteps(dateKey);
+
+  /// Get last 7 days step data (for weekly summary).
+  Map<String, int> get lastWeekSteps {
+    final result = <String, int>{};
+    final now = DateTime.now();
+    // Start from Monday of current week
+    final monday = now.subtract(Duration(days: now.weekday - 1));
+    for (int i = 0; i < 7; i++) {
+      final d = monday.add(Duration(days: i));
+      final key = _dateKey(d);
+      result[key] = key == _dateKey(now) ? _todaySteps : ActivityDatabase.getDailySteps(key);
+    }
+    return result;
+  }
+
+  /// Get step data for a specific week by its Monday date.
+  Map<String, int> getWeekSteps(DateTime monday) {
+    final result = <String, int>{};
+    final now = _dateKey(DateTime.now());
+    for (int i = 0; i < 7; i++) {
+      final d = monday.add(Duration(days: i));
+      final key = _dateKey(d);
+      result[key] = key == now ? _todaySteps : ActivityDatabase.getDailySteps(key);
+    }
+    return result;
+  }
+
   void startListening() {
-    // Restore last saved steps
+    _todayKey = _dateKey(DateTime.now());
+
+    // Restore today's saved steps (survives app restart within same day)
     _todaySteps = ActivityDatabase.getGoal('saved_steps', defaultValue: 0).toInt();
 
     _stepSubscription = Pedometer.stepCountStream.listen(
-      (stepCount) {
-        _processStepCount(stepCount.steps);
-      },
+      (stepCount) => _processStepCount(stepCount.steps),
       onError: (error) {
         debugPrint('StepProvider error: $error');
         notifyListeners();
@@ -45,15 +74,22 @@ class StepProvider extends ChangeNotifier {
       },
     );
 
-    // Auto-save every 30 seconds (survives app restart)
-    _saveTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      ActivityDatabase.saveGoal('saved_steps', _todaySteps.toDouble());
-    });
+    // Save every 30 seconds
+    _saveTimer = Timer.periodic(const Duration(seconds: 30), (_) => _save());
   }
 
   void _processStepCount(int rawSteps) {
+    // Check for day change
+    final newKey = _dateKey(DateTime.now());
+    if (newKey != _todayKey) {
+      // Day changed — save previous day and reset
+      ActivityDatabase.saveDailySteps(_todayKey, _todaySteps);
+      _todayKey = newKey;
+      _todaySteps = 0;
+      _lastRawSteps = -1;
+    }
+
     if (_lastRawSteps < 0) {
-      // First reading — just store it, don't count
       _lastRawSteps = rawSteps;
       _lastStepTime = DateTime.now();
       return;
@@ -66,39 +102,39 @@ class StepProvider extends ChangeNotifier {
     _lastRawSteps = rawSteps;
     _lastStepTime = now;
 
-    // No change — nothing to process
     if (deltaSteps <= 0) return;
 
-    // Calculate step rate (steps per second)
     final rate = deltaSteps / (deltaMs / 1000.0);
-    // Vehicle detection: if rate is unrealistically high, ignore
+
+    // Vehicle filter: >4 steps/sec
     if (rate > _maxStepRate) {
       _consecutiveValid = 0;
-      debugPrint('StepProvider: ignoring $deltaSteps steps (rate ${rate.toStringAsFixed(1)}/s = vehicle?)');
       notifyListeners();
       return;
     }
 
-    // Also ignore if rate is too slow (sensor noise when stopped)
+    // Noise filter: too slow
     if (rate < _minStepRate && deltaSteps < 3) {
       _consecutiveValid = 0;
       return;
     }
 
-    // Require consecutive valid readings
     _consecutiveValid++;
     if (_consecutiveValid >= 3) {
       _todaySteps += deltaSteps;
-      // Cap at reasonable daily max (100,000 steps)
       if (_todaySteps > 100000) _todaySteps = 100000;
     }
 
     notifyListeners();
   }
 
-  void stopListening() {
-    // Save final count
+  void _save() {
     ActivityDatabase.saveGoal('saved_steps', _todaySteps.toDouble());
+    ActivityDatabase.saveDailySteps(_todayKey, _todaySteps);
+  }
+
+  void stopListening() {
+    _save();
     _saveTimer?.cancel();
     _stepSubscription?.cancel();
     _statusSubscription?.cancel();
@@ -107,7 +143,6 @@ class StepProvider extends ChangeNotifier {
     _saveTimer = null;
   }
 
-  /// Manually add steps (e.g., from wearables or trusted source)
   void addSteps(int steps) {
     if (steps > 0) {
       _todaySteps += steps;
@@ -115,13 +150,16 @@ class StepProvider extends ChangeNotifier {
     }
   }
 
-  /// Reset today's step count
   void resetSteps() {
     _todaySteps = 0;
     _lastRawSteps = -1;
     ActivityDatabase.saveGoal('saved_steps', 0);
+    ActivityDatabase.saveDailySteps(_todayKey, 0);
     notifyListeners();
   }
+
+  static String _dateKey(DateTime dt) =>
+      '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
 
   @override
   void dispose() {

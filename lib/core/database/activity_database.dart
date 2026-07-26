@@ -4,15 +4,20 @@ import '../../features/run/run_activity.dart';
 class ActivityDatabase {
   static const _boxName = 'activities';
   static const _goalsBoxName = 'goals';
+  static const _stepsBoxName = 'daily_steps';
 
   static Future<void> init() async {
     await Hive.initFlutter();
     await Hive.openBox(_boxName);
     await Hive.openBox(_goalsBoxName);
+    await Hive.openBox(_stepsBoxName);
   }
 
   static Box get _box => Hive.box(_boxName);
   static Box get _goalsBox => Hive.box(_goalsBoxName);
+  static Box get _stepsBox => Hive.box(_stepsBoxName);
+
+  // ─── Activities ───
 
   static Future<void> saveActivity(RunActivity activity) async {
     await _box.put(activity.id, activity.toJson());
@@ -49,13 +54,41 @@ class ActivityDatabase {
     return getActivitiesInRange(start, end).length;
   }
 
-  /// Clear all stored activities and goals.
   static Future<void> clearAll() async {
     await _box.clear();
     await _goalsBox.clear();
+    await _stepsBox.clear();
   }
 
-  // Goals
+  // ─── Daily Steps Log ───
+
+  /// Save step count for a given date (dateStr = 'YYYY-MM-DD').
+  static Future<void> saveDailySteps(String dateStr, int steps) async {
+    await _stepsBox.put(dateStr, steps);
+  }
+
+  /// Get step count for a given date.
+  static int getDailySteps(String dateStr) {
+    return _stepsBox.get(dateStr, defaultValue: 0) as int;
+  }
+
+  /// Get step counts for the last N days (including today).
+  static Map<String, int> getRecentDays(int days) {
+    final result = <String, int>{};
+    final now = DateTime.now();
+    for (int i = 0; i < days; i++) {
+      final d = now.subtract(Duration(days: i));
+      final key = _dateKey(d);
+      result[key] = getDailySteps(key);
+    }
+    return result;
+  }
+
+  static String _dateKey(DateTime dt) =>
+      '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+
+  // ─── Goals ───
+
   static Future<void> saveGoal(String key, double value) async {
     await _goalsBox.put(key, value);
   }
@@ -68,5 +101,12 @@ class ActivityDatabase {
 
   static Map<String, double> getAllGoals() {
     return _goalsBox.toMap().map((k, v) => MapEntry(k, (v as num).toDouble()));
+  }
+
+  static bool get isFirstLaunch =>
+      !_goalsBox.containsKey('onboarding_done');
+
+  static Future<void> setOnboardingDone() async {
+    await _goalsBox.put('onboarding_done', 1);
   }
 }
