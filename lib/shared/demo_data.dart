@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:latlong2/latlong.dart';
 import 'package:uuid/uuid.dart';
 import '../features/run/run_activity.dart';
 import '../features/run/route_point.dart';
@@ -7,79 +8,110 @@ import '../core/database/activity_database.dart';
 class DemoData {
   static const _uuid = Uuid();
 
-  /// Generate a realistic running loop route.
-  /// Returns points simulating a ~5km route with varied pace.
-  static List<RoutePoint> _generateLoopRoute({
+  /// Generate a rectangular running route using explicit waypoints.
+  /// Creates a visible loop that spans ~1-2km across the map.
+  static List<RoutePoint> _generateRoute({
     required double startLat,
     required double startLng,
     required DateTime startTime,
-    required int totalPoints,
-    required double totalDistanceKm,
+    required double distanceKm,
   }) {
-    final points = <RoutePoint>[];
-    final rng = math.Random(42); // fixed seed for reproducibility
+    final rng = math.Random(42);
     final metersPerDeg = 111320.0;
 
-    // Pre-calculate steps: a loop that goes out and comes back
-    // Uses sin/cos to create a smooth elliptical/rounded loop
-    var lat = startLat;
-    var lng = startLng;
+    // Calculate loop dimensions based on desired distance
+    // A rectangular loop: 2*(width + height) = distanceKm * 1000
+    final halfPerimeter = distanceKm * 500; // in meters
+    final widthM = halfPerimeter * 0.6; // 60% for longer sides
+    final heightM = halfPerimeter * 0.4; // 40% for shorter sides
+
+    final widthDeg = widthM / metersPerDeg;
+    final heightDeg = heightM / metersPerDeg;
+
+    // 4 corners of the rectangular loop
+    final corners = [
+      LatLng(startLat, startLng), // start (bottom-left)
+      LatLng(startLat + heightDeg, startLng), // top-left
+      LatLng(startLat + heightDeg, startLng + widthDeg), // top-right
+      LatLng(startLat, startLng + widthDeg), // bottom-right
+    ];
+
+    // Number of points per side (proportional to side length)
+    final totalPointsPerSide = [
+      (60 * heightM / (widthM + heightM)).round(),
+      (60 * widthM / (widthM + heightM)).round(),
+      (60 * heightM / (widthM + heightM)).round(),
+      (60 * widthM / (widthM + heightM)).round(),
+    ];
+    // Ensure at least 3 points per side
+    for (int i = 0; i < 4; i++) {
+      if (totalPointsPerSide[i] < 3) totalPointsPerSide[i] = 3;
+    }
+
+    final points = <RoutePoint>[];
     var time = startTime;
 
-    // Loop radius in degrees (~2-3 km radius)
-    final radiusDeg = (totalDistanceKm / (2 * math.pi)) / 111.0;
+    for (int side = 0; side < 4; side++) {
+      final from = corners[side];
+      final to = corners[(side + 1) % 4];
+      final steps = totalPointsPerSide[side];
 
-    for (int i = 0; i < totalPoints; i++) {
-      final fraction = i / totalPoints;
-      final angle = fraction * 2 * math.pi;
+      for (int j = 0; j < steps; j++) {
+        final t = (j + 1) / steps;
 
-      // Smooth elliptical loop
-      final targetLat = startLat + radiusDeg * math.sin(angle) * 0.7;
-      final targetLng = startLng + radiusDeg * math.cos(angle);
+        // Interpolate with slight curve outward for natural look
+        var lat = from.latitude + (to.latitude - from.latitude) * t;
+        var lng = from.longitude + (to.longitude - from.longitude) * t;
 
-      // Move smoothly toward target with slight randomness
-      final stepsToTarget = (totalPoints / 6).ceil();
+        // Add outward bulge (perpendicular to direction) to avoid straight lines
+        final bulgeDirLat = -(to.longitude - from.longitude);
+        final bulgeDirLng = (to.latitude - from.latitude);
+        final bulgeLen = math.sqrt(bulgeDirLat * bulgeDirLat + bulgeDirLng * bulgeDirLng);
+        if (bulgeLen > 0) {
+          final bulgeAmount = 0.0002 * math.sin(t * math.pi);
+          lat += bulgeDirLat / bulgeLen * bulgeAmount;
+          lng += bulgeDirLng / bulgeLen * bulgeAmount;
+        }
 
-      if (i > 0) {
-        final prevTargetIdx = ((i - 1) ~/ stepsToTarget) * stepsToTarget;
-        final prevFraction = prevTargetIdx / totalPoints;
-        final prevAngle = prevFraction * 2 * math.pi;
-        final prevTargetLat = startLat + radiusDeg * math.sin(prevAngle) * 0.7;
-        final prevTargetLng = startLng + radiusDeg * math.cos(prevAngle);
+        // Add small random jitter (±10m)
+        lat += (rng.nextDouble() - 0.5) * 20 / metersPerDeg;
+        lng += (rng.nextDouble() - 0.5) * 20 / metersPerDeg;
 
-        // Interpolate toward current segment target
-        final t = (i % stepsToTarget) / stepsToTarget;
-        lat = prevTargetLat + (targetLat - prevTargetLat) * t;
-        lng = prevTargetLng + (targetLng - prevTargetLng) * t;
+        final secondsBetween = 5 + rng.nextInt(8);
+        time = time.add(Duration(seconds: secondsBetween));
 
-        // Add small random jitter (±15m) to look natural
-        lat += (rng.nextDouble() - 0.5) * 15 / metersPerDeg;
-        lng += (rng.nextDouble() - 0.5) * 15 / metersPerDeg;
+        points.add(RoutePoint(
+          latitude: lat,
+          longitude: lng,
+          timestamp: time,
+        ));
       }
+    }
 
-      // Simulate variable pace: 5-15 seconds between points
-      final secondsBetween = 5 + rng.nextInt(10);
-      time = time.add(Duration(seconds: secondsBetween));
-
-      points.add(RoutePoint(
-        latitude: lat,
-        longitude: lng,
-        timestamp: time,
-      ));
+    // Close the loop: replace last few points to end near start
+    final closeSteps = 5;
+    for (int i = 0; i < closeSteps && i < points.length; i++) {
+      final idx = points.length - 1 - i;
+      final t = (i + 1) / closeSteps;
+      final old = points[idx];
+      points[idx] = RoutePoint(
+        latitude: old.latitude + (startLat - old.latitude) * t * 0.4,
+        longitude: old.longitude + (startLng - old.longitude) * t * 0.4,
+        timestamp: old.timestamp,
+      );
     }
 
     return points;
   }
 
-  /// Run A: Fast 5K loop
+  /// Run A: Fast 5K rectangular loop
   static RunActivity _fastRun() {
     final start = DateTime.now().subtract(const Duration(days: 1));
-    final route = _generateLoopRoute(
-      startLat: -6.2088, // Jakarta area
+    final route = _generateRoute(
+      startLat: -6.2088,
       startLng: 106.8456,
       startTime: start,
-      totalPoints: 120,
-      totalDistanceKm: 5.0,
+      distanceKm: 5.0,
     );
     final end = route.last.timestamp;
 
@@ -92,15 +124,14 @@ class DemoData {
     );
   }
 
-  /// Run B: Medium 3K out-and-back
+  /// Run B: Medium 3K loop
   static RunActivity _mediumRun() {
     final start = DateTime.now().subtract(const Duration(days: 3));
-    final route = _generateLoopRoute(
+    final route = _generateRoute(
       startLat: -6.2146,
       startLng: 106.8451,
       startTime: start,
-      totalPoints: 80,
-      totalDistanceKm: 3.0,
+      distanceKm: 3.0,
     );
     final end = route.last.timestamp;
 
@@ -113,15 +144,14 @@ class DemoData {
     );
   }
 
-  /// Run C: Slow 2K recovery run
+  /// Run C: Slow 2K loop
   static RunActivity _slowRun() {
     final start = DateTime.now().subtract(const Duration(days: 7));
-    final route = _generateLoopRoute(
+    final route = _generateRoute(
       startLat: -6.2012,
       startLng: 106.8521,
       startTime: start,
-      totalPoints: 60,
-      totalDistanceKm: 2.0,
+      distanceKm: 2.0,
     );
     final end = route.last.timestamp;
 
@@ -134,15 +164,14 @@ class DemoData {
     );
   }
 
-  /// Run D: Long 10K run
+  /// Run D: Long 10K loop
   static RunActivity _longRun() {
     final start = DateTime.now().subtract(const Duration(days: 14));
-    final route = _generateLoopRoute(
+    final route = _generateRoute(
       startLat: -6.2254,
       startLng: 106.8374,
       startTime: start,
-      totalPoints: 200,
-      totalDistanceKm: 10.0,
+      distanceKm: 10.0,
     );
     final end = route.last.timestamp;
 
@@ -162,7 +191,6 @@ class DemoData {
       await ActivityDatabase.saveActivity(run);
     }
 
-    // Set sample goals
     await ActivityDatabase.saveGoal('weekly_distance', 15.0);
     await ActivityDatabase.saveGoal('weekly_duration', 120.0);
     await ActivityDatabase.saveGoal('weekly_runs', 3.0);

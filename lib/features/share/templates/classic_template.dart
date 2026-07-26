@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../../run/run_activity.dart';
 import '../share_service.dart';
 
@@ -63,8 +64,10 @@ class ClassicTemplate extends StatelessWidget {
                     child: FlutterMap(
                       key: ValueKey('classic-${activity.id}'),
                       options: MapOptions(
-                        initialCenter: routePoints.first,
-                        initialZoom: 15.0,
+                        initialCameraFit: CameraFit.bounds(
+                          bounds: _getBounds(routePoints),
+                          padding: const EdgeInsets.all(30),
+                        ),
                         interactionOptions: const InteractionOptions(
                           flags: InteractiveFlag.none,
                         ),
@@ -109,6 +112,21 @@ class ClassicTemplate extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  LatLngBounds _getBounds(List<LatLng> points) {
+    double minLat = double.infinity, maxLat = double.negativeInfinity;
+    double minLng = double.infinity, maxLng = double.negativeInfinity;
+    for (final p in points) {
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLng) minLng = p.longitude;
+      if (p.longitude > maxLng) maxLng = p.longitude;
+    }
+    return LatLngBounds(
+      LatLng(minLat, minLng),
+      LatLng(maxLat, maxLng),
     );
   }
 

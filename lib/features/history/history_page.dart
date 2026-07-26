@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:intl/intl.dart';
 import '../../core/database/activity_database.dart';
 import '../../features/run/run_activity.dart';
+import '../../features/run/route_point.dart';
 import '../../features/share/share_page.dart';
 
 class HistoryPage extends StatefulWidget {
@@ -211,8 +213,10 @@ class _ActivityDetailPage extends StatelessWidget {
                 ? const Center(child: Text('No route data'))
                 : FlutterMap(
                     options: MapOptions(
-                      initialCenter: segments.first.startLatLng,
-                      initialZoom: 15.0,
+                      initialCameraFit: CameraFit.bounds(
+                        bounds: _calcBounds(segments),
+                        padding: const EdgeInsets.all(40),
+                      ),
                     ),
                     children: [
                       TileLayer(
@@ -302,5 +306,22 @@ class _ActivityDetailPage extends StatelessWidget {
     final h = d.inHours;
     final m = d.inMinutes.remainder(60);
     return h > 0 ? '${h}h ${m}m' : '${m}m';
+  }
+
+  LatLngBounds _calcBounds(List<PaceSegment> segments) {
+    double minLat = double.infinity, maxLat = double.negativeInfinity;
+    double minLng = double.infinity, maxLng = double.negativeInfinity;
+    for (final s in segments) {
+      for (final p in [s.startLatLng, s.endLatLng]) {
+        if (p.latitude < minLat) minLat = p.latitude;
+        if (p.latitude > maxLat) maxLat = p.latitude;
+        if (p.longitude < minLng) minLng = p.longitude;
+        if (p.longitude > maxLng) maxLng = p.longitude;
+      }
+    }
+    return LatLngBounds(
+      LatLng(minLat, minLng),
+      LatLng(maxLat, maxLng),
+    );
   }
 }
