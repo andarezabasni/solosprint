@@ -94,21 +94,40 @@ class RunProvider extends ChangeNotifier {
     _positionSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 5,
+        distanceFilter: 3,
+        timeLimit: Duration(seconds: 10), // stop after 10s no movement
       ),
     ).listen((position) {
+      // Skip if accuracy is too poor (GPS not locked)
+      if (position.accuracy > 30) return; // skip if accuracy > 30m
+
       final point = RoutePoint(
         latitude: position.latitude,
         longitude: position.longitude,
         timestamp: DateTime.now(),
       );
-      if (_route.isNotEmpty) {
-        final last = _route.last;
-        _distance += Geolocator.distanceBetween(
-              last.latitude, last.longitude, point.latitude, point.longitude,
-            ) /
-            1000.0;
+
+      if (_route.isEmpty) {
+        // First position: just set baseline, don't count distance
+        _route.add(point);
+        notifyListeners();
+        return;
       }
+
+      final last = _route.last;
+      final distKm = Geolocator.distanceBetween(
+            last.latitude, last.longitude, point.latitude, point.longitude,
+          ) /
+          1000.0;
+
+      // Skip if movement is less than 10m (GPS drift filter)
+      if (distKm < 0.01) return;
+
+      // Also skip if speed suggests not walking (< 0.5 m/s ≈ 1.8 km/h)
+      // Skip if speed is available and too slow for walking
+      if (_route.length > 3 && position.speed < 0.3 && distKm < 0.05) return;
+
+      _distance += distKm;
       _route.add(point);
       notifyListeners();
     });

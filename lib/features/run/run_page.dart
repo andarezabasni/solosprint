@@ -158,14 +158,15 @@ class _RunPageBody extends StatelessWidget {
     );
   }
 
-  /// Render map with colored polyline segments based on pace (StatMaps).
+  /// Render map. Shows grey background + GPS-off icon until first fix.
   Widget _buildStatMap(RunProvider provider) {
     final segments = provider.paceSegments;
-    final center = provider.route.isNotEmpty
+    final hasPos = provider.route.isNotEmpty;
+    final center = hasPos
         ? provider.route.last.latLng
-        : const LatLng(-6.2, 106.8); // fallback: Jakarta
+        : const LatLng(-6.2, 106.8);
 
-    return FlutterMap(
+    final map = FlutterMap(
       options: MapOptions(
         initialCenter: center,
         initialZoom: 16.0,
@@ -175,17 +176,14 @@ class _RunPageBody extends StatelessWidget {
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'com.solosprint.solosprint',
         ),
-        // Colored segments (StatMaps)
-        PolylineLayer(
-          polylines: segments.map((seg) {
-            return Polyline(
-              points: [seg.startLatLng, seg.endLatLng],
-              color: seg.color,
-              strokeWidth: 5,
-            );
-          }).toList(),
-        ),
-        // Start marker
+        if (segments.isNotEmpty)
+          PolylineLayer(
+            polylines: segments.map((seg) => Polyline(
+                  points: [seg.startLatLng, seg.endLatLng],
+                  color: seg.color,
+                  strokeWidth: 5,
+                )).toList(),
+          ),
         MarkerLayer(
           markers: [
             if (segments.isNotEmpty)
@@ -193,21 +191,37 @@ class _RunPageBody extends StatelessWidget {
                 point: provider.route.first.latLng,
                 width: 24,
                 height: 24,
-                child: const Icon(Icons.circle, color: Color(0xFF10B981), size: 16),
+                child: const Icon(Icons.circle,
+                    color: Color(0xFF10B981), size: 16),
               ),
-            // Current position
-            if (provider.route.isNotEmpty)
+            if (hasPos)
               Marker(
                 point: provider.route.last.latLng,
-              width: 30,
-              height: 30,
-              child: const Icon(
-                Icons.my_location,
-                color: Color(0xFFFF6B35),
-                size: 30,
+                width: 30,
+                height: 30,
+                child: const Icon(Icons.my_location,
+                    color: Color(0xFFFF6B35), size: 30),
               ),
-            ),
           ],
+        ),
+      ],
+    );
+
+    // Always return a container (no null/empty states)
+    if (hasPos) return map;
+    return Stack(
+      children: [
+        map, // show map even without GPS
+        const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.gps_off, size: 40, color: Colors.grey),
+              SizedBox(height: 8),
+              Text('Waiting for GPS...',
+                  style: TextStyle(color: Colors.grey, fontSize: 14)),
+            ],
+          ),
         ),
       ],
     );
