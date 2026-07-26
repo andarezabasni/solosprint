@@ -18,7 +18,6 @@ class PhotoTemplate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final routePoints = activity.route.map((r) => r.latLng).toList();
-    final hasRoute = routePoints.length >= 2;
 
     return Container(
       width: 1080,
@@ -33,32 +32,21 @@ class PhotoTemplate extends StatelessWidget {
           : const BoxDecoration(color: Color(0xFF1A1A2E)),
       child: Stack(
         children: [
-          // Dark overlay (lighter when photo present)
+          // Dark overlay
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withValues(alpha: imagePath != null ? 0.35 : 0.0),
+                  Colors.black.withValues(alpha: imagePath != null ? 0.30 : 0.0),
+                  Colors.black.withValues(alpha: imagePath != null ? 0.40 : 0.0),
                   Colors.black.withValues(alpha: imagePath != null ? 0.55 : 0.0),
                   Colors.black.withValues(alpha: imagePath != null ? 0.70 : 0.0),
                 ],
               ),
             ),
           ),
-
-          // Route polyline drawn on photo
-          if (hasRoute)
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _RoutePainter(
-                  points: routePoints,
-                  color: const Color(0xFFFC4C02),
-                  strokeWidth: 12,
-                ),
-              ),
-            ),
 
           // Logo & Date at top
           Positioned(
@@ -79,9 +67,7 @@ class PhotoTemplate extends StatelessWidget {
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.2,
-                        shadows: [
-                          Shadow(blurRadius: 4, color: Colors.black45),
-                        ],
+                        shadows: [Shadow(blurRadius: 4, color: Colors.black45)],
                       ),
                     ),
                   ],
@@ -99,11 +85,27 @@ class PhotoTemplate extends StatelessWidget {
             ),
           ),
 
-          // Stats at bottom - without background card
+          // Route polyline in the middle area (centered, moderate size)
+          if (routePoints.length >= 2)
+            Positioned(
+              left: 80,
+              right: 80,
+              top: 320,
+              bottom: 420,
+              child: CustomPaint(
+                painter: _RoutePainter(
+                  points: routePoints,
+                  color: const Color(0xFFFC4C02),
+                  strokeWidth: 14,
+                ),
+              ),
+            ),
+
+          // Stats at bottom (no background card)
           Positioned(
             left: 0,
             right: 0,
-            bottom: 80,
+            bottom: 120,
             child: Center(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -131,7 +133,7 @@ class PhotoTemplate extends StatelessWidget {
             ),
           ),
 
-          // "Tap to add photo" placeholder
+          // Empty state
           if (imagePath == null)
             const Center(
               child: Column(
@@ -195,9 +197,9 @@ class PhotoTemplate extends StatelessWidget {
   }
 }
 
-/// Draws route polyline on the photo using GPS-to-pixel conversion.
+/// Draws route polyline centered in the available canvas area.
 class _RoutePainter extends CustomPainter {
-  final List<Offset> _points; // pixel coordinates
+  final List<LatLng> _originalPoints;
   final Color color;
   final double strokeWidth;
 
@@ -205,15 +207,50 @@ class _RoutePainter extends CustomPainter {
     required List<LatLng> points,
     required this.color,
     required this.strokeWidth,
-  }) : _points = _projectPoints(points);
+  }) : _originalPoints = points;
 
-  /// Convert GPS coordinates to canvas pixel coordinates (1080x1920).
-  static List<Offset> _projectPoints(List<LatLng> gpsPoints) {
-    if (gpsPoints.isEmpty) return [];
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (_originalPoints.length < 2) return;
 
+    // Project GPS to pixel coordinates within the available canvas area
+    final projected = _projectToCanvas(_originalPoints, size);
+
+    // Draw polyline
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+
+    final path = Path();
+    path.moveTo(projected[0].dx, projected[0].dy);
+    for (int i = 1; i < projected.length; i++) {
+      path.lineTo(projected[i].dx, projected[i].dy);
+    }
+    canvas.drawPath(path, paint);
+
+    // Start marker (green)
+    canvas.drawCircle(
+      projected[0],
+      strokeWidth * 0.7,
+      Paint()..color = const Color(0xFF10B981)..style = PaintingStyle.fill,
+    );
+
+    // End marker (orange)
+    canvas.drawCircle(
+      projected.last,
+      strokeWidth * 0.7,
+      Paint()..color = color..style = PaintingStyle.fill,
+    );
+  }
+
+  /// Convert GPS coords to pixel coords fitting within [size] with padding.
+  List<Offset> _projectToCanvas(List<LatLng> gps, Size size) {
     double minLat = double.infinity, maxLat = double.negativeInfinity;
     double minLng = double.infinity, maxLng = double.negativeInfinity;
-    for (final p in gpsPoints) {
+    for (final p in gps) {
       if (p.latitude < minLat) minLat = p.latitude;
       if (p.latitude > maxLat) maxLat = p.latitude;
       if (p.longitude < minLng) minLng = p.longitude;
@@ -224,62 +261,21 @@ class _RoutePainter extends CustomPainter {
     final lngRange = maxLng - minLng;
     if (latRange == 0 && lngRange == 0) return [];
 
-    const canvasW = 1080.0;
-    const canvasH = 1920.0;
-    const pad = 0.10;
-    final drawW = canvasW * (1 - 2 * pad);
-    final drawH = canvasH * (1 - 2 * pad);
-    final offsetX = canvasW * pad;
-    final offsetY = canvasH * pad;
+    const pad = 0.12; // 12% padding inside the allocated area
+    final drawW = size.width * (1 - 2 * pad);
+    final drawH = size.height * (1 - 2 * pad);
 
-    final scaleX = drawW / lngRange;
-    final scaleY = drawH / latRange;
-    final scale = math.min(scaleX, scaleY);
+    final centerLat = (minLat + maxLat) / 2;
+    final centerLng = (minLng + maxLng) / 2;
 
-    final centerX = (minLng + maxLng) / 2;
-    final centerY = (minLat + maxLat) / 2;
+    // Scale to fit while preserving aspect ratio
+    final scale = math.min(drawW / lngRange, drawH / latRange);
 
-    return gpsPoints.map((p) {
-      final x = offsetX + drawW / 2 + (p.longitude - centerX) * scale;
-      final y = offsetY + drawH / 2 - (p.latitude - centerY) * scale;
-      return Offset(
-        x.clamp(0.0, canvasW),
-        y.clamp(0.0, canvasH),
-      );
+    return gps.map((p) {
+      final x = size.width / 2 + (p.longitude - centerLng) * scale;
+      final y = size.height / 2 - (p.latitude - centerLat) * scale;
+      return Offset(x, y);
     }).toList();
-  }
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (_points.length < 2) return;
-
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..style = PaintingStyle.stroke;
-
-    final path = Path();
-    path.moveTo(_points[0].dx, _points[0].dy);
-    for (int i = 1; i < _points.length; i++) {
-      path.lineTo(_points[i].dx, _points[i].dy);
-    }
-    canvas.drawPath(path, paint);
-
-    // Start marker (green)
-    canvas.drawCircle(
-      _points[0],
-      strokeWidth * 0.8,
-      Paint()..color = const Color(0xFF10B981)..style = PaintingStyle.fill,
-    );
-
-    // End marker (orange)
-    canvas.drawCircle(
-      _points.last,
-      strokeWidth * 0.8,
-      Paint()..color = color..style = PaintingStyle.fill,
-    );
   }
 
   @override
