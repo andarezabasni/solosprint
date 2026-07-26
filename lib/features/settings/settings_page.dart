@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme_provider.dart';
 import '../../core/language_provider.dart';
 import '../../shared/localization.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../shared/widgets/app_logo.dart';
 import '../../shared/demo_data.dart';
 import 'goals_page.dart';
@@ -117,34 +118,56 @@ class SettingsPage extends StatelessWidget {
                     style: TextStyle(color: Colors.grey[600], fontSize: 13),
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.camera_alt_outlined, size: 16, color: Colors.grey),
-                      const SizedBox(width: 6),
-                      Text(
-                        '@andarezabasni',
-                        style: TextStyle(
-                          color: Colors.grey[700],
-                          fontWeight: FontWeight.w600,
-                        ),
+                  // Instagram — clickable
+                  InkWell(
+                    onTap: () => _openUrl('https://instagram.com/andreza.dev'),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.camera_alt_outlined, size: 16, color: Colors.grey[600]),
+                          const SizedBox(width: 6),
+                          Text(
+                            'andreza.dev',
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w600,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(Icons.open_in_new, size: 12, color: Colors.grey[400]),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                   const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.code, size: 16, color: Colors.grey),
-                      const SizedBox(width: 6),
-                      Text(
-                        'github.com/andarezabasni',
-                        style: TextStyle(
-                          color: Colors.grey[700],
-                          fontWeight: FontWeight.w600,
-                        ),
+                  // GitHub — clickable
+                  InkWell(
+                    onTap: () => _openUrl('https://github.com/andarezabasni'),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.code, size: 16, color: Colors.grey[600]),
+                          const SizedBox(width: 6),
+                          Text(
+                            'github.com/andarezabasni',
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w600,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(Icons.open_in_new, size: 12, color: Colors.grey[400]),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -158,6 +181,13 @@ class SettingsPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _openUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   void _showLanguageDialog(BuildContext context) {

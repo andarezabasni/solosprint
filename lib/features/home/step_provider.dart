@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pedometer/pedometer.dart';
 import '../../core/database/activity_database.dart';
+import '../../core/notification_service.dart';
 
 class StepProvider extends ChangeNotifier {
   int _todaySteps = 0;
@@ -16,6 +17,7 @@ class StepProvider extends ChangeNotifier {
   static const _maxStepRate = 4;
   static const _minStepRate = 0.5;
   int _consecutiveValid = 0;
+  int _lastNotifCheckSteps = -1;
 
   int get todaySteps => _todaySteps;
   String get status => _status;
@@ -123,6 +125,7 @@ class StepProvider extends ChangeNotifier {
     if (_consecutiveValid >= 3) {
       _todaySteps += deltaSteps;
       if (_todaySteps > 100000) _todaySteps = 100000;
+      _checkNotification();
     }
 
     notifyListeners();
@@ -156,6 +159,13 @@ class StepProvider extends ChangeNotifier {
     ActivityDatabase.saveGoal('saved_steps', 0);
     ActivityDatabase.saveDailySteps(_todayKey, 0);
     notifyListeners();
+  }
+
+  void _checkNotification() {
+    // Only check every 500 steps to avoid spam
+    if ((_todaySteps - _lastNotifCheckSteps).abs() < 500) return;
+    _lastNotifCheckSteps = _todaySteps;
+    NotificationService.checkAndNotify(_todaySteps);
   }
 
   static String _dateKey(DateTime dt) =>

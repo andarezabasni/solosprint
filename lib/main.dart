@@ -4,6 +4,7 @@ import 'core/theme.dart';
 import 'core/theme_provider.dart';
 import 'core/language_provider.dart';
 import 'core/database/activity_database.dart';
+import 'core/notification_service.dart';
 import 'shared/widgets/app_logo.dart';
 import 'features/home/home_page.dart';
 import 'features/home/step_provider.dart';
@@ -36,6 +37,7 @@ class _SoloSprintAppState extends State<SoloSprintApp> {
 
   Future<void> _init() async {
     await ActivityDatabase.init();
+    await NotificationService.init();
     _themeProvider.init();
     setState(() => _ready = true);
   }
