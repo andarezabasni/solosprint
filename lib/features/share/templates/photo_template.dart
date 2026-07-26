@@ -98,6 +98,7 @@ class PhotoTemplate extends StatelessWidget {
                     color: const Color(0xFFFC4C02),
                     strokeWidth: 16,
                   ),
+                  child: const SizedBox.expand(),
                 ),
               ),
             ),

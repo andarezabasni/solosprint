@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../core/database/activity_database.dart';
+import '../../core/language_provider.dart';
+import '../../shared/localization.dart';
 import '../../shared/widgets/weekly_summary.dart';
+import '../settings/settings_page.dart';
 import 'step_provider.dart';
 import 'onboarding_dialog.dart';
 
@@ -80,6 +83,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<LanguageProvider>();
     final stepProvider = context.watch<StepProvider>();
     final stepTarget = ActivityDatabase.getGoal('daily_step_target',
         defaultValue: 8000);
@@ -91,7 +95,7 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SoloSprint'),
+        title: Text(Strings.appName),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -99,7 +103,14 @@ class _HomePageState extends State<HomePage> {
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SettingsPage(),
+                ),
+              );
+            },
           ),
         ],
       ),

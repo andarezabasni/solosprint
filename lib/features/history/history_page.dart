@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:provider/provider.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:intl/intl.dart';
+import '../../core/language_provider.dart';
+import '../../shared/localization.dart';
 import '../../core/database/activity_database.dart';
 import '../../features/run/run_activity.dart';
 import '../../features/run/route_point.dart';
@@ -31,9 +34,10 @@ class _HistoryPageState extends State<HistoryPage> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<LanguageProvider>();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('History'),
+        title: Text(Strings.history),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -177,7 +181,7 @@ class _ActivityDetailPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Run Detail'),
+        title: Text(Strings.runDetail),
         actions: [
           IconButton(
             icon: const Icon(Icons.share_outlined),

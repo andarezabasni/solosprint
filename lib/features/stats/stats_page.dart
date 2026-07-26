@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../../core/language_provider.dart';
+import '../../shared/localization.dart';
 import '../../core/database/activity_database.dart';
 
 class StatsPage extends StatefulWidget {
@@ -14,9 +17,10 @@ class _StatsPageState extends State<StatsPage> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<LanguageProvider>();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Stats'),
+        title: Text(Strings.stats),
       ),
       body: Column(
         children: [
