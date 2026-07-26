@@ -84,10 +84,12 @@ class _RunPageBody extends StatelessWidget {
                   ),
                 );
                 if (result != null && context.mounted) {
+                  final waypoints = result['waypoints'] as List<LatLng>;
+                  provider.setPlannedRoute(waypoints);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        'Route: ${result['distance'].toStringAsFixed(1)} km'
+                        'Route set: ${result['distance'].toStringAsFixed(1)} km'
                         ', ~${result['estMinutes']} min est.',
                       ),
                     ),
@@ -95,7 +97,7 @@ class _RunPageBody extends StatelessWidget {
                 }
               },
               icon: const Icon(Icons.route, size: 20),
-              label: const Text('Plan Route'),
+              label: Text(provider.plannedRoute.isEmpty ? 'Plan Route' : 'Planned ✓'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFFFF6B35),
                 side: const BorderSide(color: Color(0xFFFF6B35)),
@@ -223,6 +225,19 @@ class _RunPageBody extends StatelessWidget {
                   color: seg.color,
                   strokeWidth: 5,
                 )).toList(),
+          ),
+        // Planned route (dashed) — always show if set
+        if (provider.plannedRoute.length >= 2)
+          PolylineLayer(
+            polylines: [
+              Polyline(
+                points: provider.plannedRoute,
+                color: const Color(0xFFFF6B35).withValues(alpha: 0.35),
+                strokeWidth: 2,
+                borderStrokeWidth: 1,
+                borderColor: const Color(0xFFFF6B35).withValues(alpha: 0.2),
+              ),
+            ],
           ),
         MarkerLayer(
           markers: [

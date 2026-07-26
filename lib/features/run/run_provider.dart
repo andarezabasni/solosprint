@@ -18,6 +18,7 @@ class RunProvider extends ChangeNotifier {
   Timer? _timer;
   int _elapsedSeconds = 0;
   LatLng? _initialPosition;
+  List<LatLng> _plannedRoute = [];
   static const _uuid = Uuid();
   Timer? _notifTimer;
 
@@ -26,6 +27,7 @@ class RunProvider extends ChangeNotifier {
   DateTime? get startTime => _startTime;
   List<RoutePoint> get route => List.unmodifiable(_route);
   LatLng? get initialPosition => _initialPosition;
+  List<LatLng> get plannedRoute => List.unmodifiable(_plannedRoute);
   double get distance => _distance;
   int get elapsedSeconds => _elapsedSeconds;
   String get formattedDuration => _formatDuration(_elapsedSeconds);
@@ -65,6 +67,17 @@ class RunProvider extends ChangeNotifier {
     final permission = await Geolocator.requestPermission();
     return permission == LocationPermission.always ||
         permission == LocationPermission.whileInUse;
+  }
+
+  /// Start tracking with optional pre-planned route waypoints.
+  void setPlannedRoute(List<LatLng> waypoints) {
+    _plannedRoute = List.from(waypoints);
+    notifyListeners();
+  }
+
+  void clearPlannedRoute() {
+    _plannedRoute = [];
+    notifyListeners();
   }
 
   Future<void> startTracking() async {
