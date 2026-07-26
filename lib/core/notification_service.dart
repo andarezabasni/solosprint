@@ -44,6 +44,37 @@ class NotificationService {
   }
 
   /// Check step target and show appropriate notification.
+  /// Show persistent run tracking notification (shows on lock screen).
+  static Future<void> showRunNotification({
+    required String distance,
+    required String duration,
+    bool paused = false,
+  }) async {
+    final title = paused ? 'SoloSprint Paused' : 'SoloSprint Running';
+    final body = paused ? '$distance km | $duration' : '$distance km | $duration';
+    await _notif.show(
+      999,
+      title,
+      body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'run_tracking',
+          'Run Tracking',
+          importance: Importance.low,
+          priority: Priority.low,
+          ongoing: !paused,
+          showWhen: false,
+          autoCancel: false,
+        ),
+      ),
+    );
+  }
+
+  /// Cancel the run tracking notification.
+  static Future<void> cancelRunNotification() async {
+    await _notif.cancel(999);
+  }
+
   static Future<void> checkAndNotify(int todaySteps) async {
     final target = ActivityDatabase.getGoal('daily_step_target', defaultValue: 8000);
     if (target <= 0) return;

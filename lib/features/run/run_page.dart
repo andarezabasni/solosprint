@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import '../../core/language_provider.dart';
 import '../../shared/localization.dart';
@@ -160,25 +161,13 @@ class _RunPageBody extends StatelessWidget {
   /// Render map with colored polyline segments based on pace (StatMaps).
   Widget _buildStatMap(RunProvider provider) {
     final segments = provider.paceSegments;
-    if (provider.route.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(color: Color(0xFFFF6B35)),
-            const SizedBox(height: 16),
-            Text('Waiting for GPS...',
-                style: TextStyle(color: Colors.grey[600])),
-          ],
-        ),
-      );
-    }
-
-    final lastPoint = provider.route.last.latLng;
+    final center = provider.route.isNotEmpty
+        ? provider.route.last.latLng
+        : const LatLng(-6.2, 106.8); // fallback: Jakarta
 
     return FlutterMap(
       options: MapOptions(
-        initialCenter: lastPoint,
+        initialCenter: center,
         initialZoom: 16.0,
       ),
       children: [
@@ -207,8 +196,9 @@ class _RunPageBody extends StatelessWidget {
                 child: const Icon(Icons.circle, color: Color(0xFF10B981), size: 16),
               ),
             // Current position
-            Marker(
-              point: lastPoint,
+            if (provider.route.isNotEmpty)
+              Marker(
+                point: provider.route.last.latLng,
               width: 30,
               height: 30,
               child: const Icon(
