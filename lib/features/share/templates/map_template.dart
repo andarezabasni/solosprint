@@ -78,13 +78,13 @@ class MapTemplate extends StatelessWidget {
                         // Logo
                         Row(
                           children: [
-                            const AppLogo(size: 36),
+                            const AppLogo(size: 52),
                             const SizedBox(width: 12),
                             Text(
                               'SoloSprint',
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 28,
+                                fontSize: 38,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 1.2,
                               ),
@@ -95,7 +95,7 @@ class MapTemplate extends StatelessWidget {
                         Text(
                           ShareService.formatDate(activity.startTime),
                           style: const TextStyle(
-                              color: Colors.white70, fontSize: 18),
+                              color: Colors.white70, fontSize: 22),
                         ),
                         const SizedBox(height: 24),
                         // Stats row
@@ -143,7 +143,7 @@ class MapTemplate extends StatelessWidget {
       children: [
         Text(label,
             style: const TextStyle(
-                color: Colors.white70, fontSize: 14, letterSpacing: 1.5)),
+                color: Colors.white70, fontSize: 16, letterSpacing: 1.5)),
         const SizedBox(height: 6),
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -151,14 +151,14 @@ class MapTemplate extends StatelessWidget {
             Text(value,
                 style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 32,
+                    fontSize: 44,
                     fontWeight: FontWeight.bold)),
             if (unit.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(left: 4, bottom: 6),
                 child: Text(unit,
                     style: const TextStyle(
-                        color: Colors.white70, fontSize: 16)),
+                        color: Colors.white70, fontSize: 20)),
               ),
           ],
         ),

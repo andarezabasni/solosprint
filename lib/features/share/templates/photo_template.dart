@@ -88,8 +88,8 @@ class PhotoTemplate extends StatelessWidget {
             Positioned.fill(
               left: 60,
               right: 60,
-              top: 280,
-              bottom: 380,
+              top: 400,
+              bottom: 440,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: LayoutBuilder(
@@ -146,7 +146,7 @@ class PhotoTemplate extends StatelessWidget {
         Text(label,
             style: const TextStyle(
                 color: Colors.white70,
-                fontSize: 13,
+                fontSize: 16,
                 letterSpacing: 1.5)),
         const SizedBox(height: 4),
         Row(
@@ -155,7 +155,7 @@ class PhotoTemplate extends StatelessWidget {
             Text(value,
                 style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 42,
+                    fontSize: 56,
                     fontWeight: FontWeight.bold,
                     shadows: [
                       Shadow(blurRadius: 4, color: Colors.black54)
@@ -166,7 +166,7 @@ class PhotoTemplate extends StatelessWidget {
                 child: Text(unit,
                     style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 18,
+                        fontSize: 22,
                         shadows: [
                           Shadow(blurRadius: 3, color: Colors.black45)
                         ])),

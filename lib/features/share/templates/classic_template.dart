@@ -34,13 +34,13 @@ class ClassicTemplate extends StatelessWidget {
           // Logo
           Row(
             children: [
-              const AppLogo(size: 36),
+              const AppLogo(size: 52),
               const SizedBox(width: 12),
               Text(
                 'SoloSprint',
                 style: TextStyle(
                   color: textColor,
-                  fontSize: 28,
+                  fontSize: 38,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.2,
                 ),
@@ -50,7 +50,7 @@ class ClassicTemplate extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             ShareService.formatDate(activity.startTime),
-            style: TextStyle(color: subtextColor, fontSize: 18),
+            style: TextStyle(color: subtextColor, fontSize: 22),
           ),
           const SizedBox(height: 40),
 
@@ -134,16 +134,16 @@ class ClassicTemplate extends StatelessWidget {
   Widget _statItem(String label, String value, String unit, Color textColor, Color subtextColor) {
     return Column(
       children: [
-        Text(label, style: TextStyle(color: subtextColor, fontSize: 14, letterSpacing: 1.5)),
+        Text(label, style: TextStyle(color: subtextColor, fontSize: 16, letterSpacing: 1.5)),
         const SizedBox(height: 6),
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(value, style: TextStyle(color: textColor, fontSize: 32, fontWeight: FontWeight.bold)),
+            Text(value, style: TextStyle(color: textColor, fontSize: 44, fontWeight: FontWeight.bold)),
             if (unit.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(left: 4, bottom: 6),
-                child: Text(unit, style: TextStyle(color: subtextColor, fontSize: 16)),
+                child: Text(unit, style: TextStyle(color: subtextColor, fontSize: 20)),
               ),
           ],
         ),
