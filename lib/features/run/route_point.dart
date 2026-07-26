@@ -21,9 +21,9 @@ class RoutePoint {
       };
 
   factory RoutePoint.fromJson(Map<String, dynamic> json) => RoutePoint(
-        latitude: json['lat'] as double,
-        longitude: json['lng'] as double,
-        timestamp: DateTime.parse(json['ts'] as String),
+        latitude: (json['lat'] as num).toDouble(),
+        longitude: (json['lng'] as num).toDouble(),
+        timestamp: DateTime.parse('${json['ts']}'),
       );
 }
 

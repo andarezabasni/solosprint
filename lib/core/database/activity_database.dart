@@ -19,9 +19,14 @@ class ActivityDatabase {
   }
 
   static List<RunActivity> getAllActivities() {
-    final values = _box.values.cast<Map<String, dynamic>>();
-    return values.map((json) => RunActivity.fromJson(json)).toList()
-      ..sort((a, b) => b.startTime.compareTo(a.startTime));
+    final result = <RunActivity>[];
+    for (final value in _box.values) {
+      if (value is Map) {
+        result.add(RunActivity.fromJson(Map<String, dynamic>.from(value)));
+      }
+    }
+    result.sort((a, b) => b.startTime.compareTo(a.startTime));
+    return result;
   }
 
   static List<RunActivity> getActivitiesInRange(DateTime start, DateTime end) {
@@ -50,7 +55,9 @@ class ActivityDatabase {
   }
 
   static double getGoal(String key, {double defaultValue = 0.0}) {
-    return _goalsBox.get(key, defaultValue: defaultValue) as double;
+    final value = _goalsBox.get(key, defaultValue: defaultValue);
+    if (value is num) return value.toDouble();
+    return defaultValue;
   }
 
   static Map<String, double> getAllGoals() {

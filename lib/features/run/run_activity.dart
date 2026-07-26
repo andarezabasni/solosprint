@@ -57,17 +57,21 @@ class RunActivity {
   }
 
   factory RunActivity.fromJson(Map<String, dynamic> json) {
+    final routeList = <RoutePoint>[];
+    if (json['route'] is List) {
+      for (final r in json['route'] as List) {
+        if (r is Map) {
+          routeList.add(RoutePoint.fromJson(Map<String, dynamic>.from(r)));
+        }
+      }
+    }
     return RunActivity(
-      id: json['id'] as String,
-      startTime: DateTime.parse(json['startTime'] as String),
-      endTime: json['endTime'] != null
-          ? DateTime.parse(json['endTime'] as String)
-          : null,
-      route: (json['route'] as List)
-          .map((r) => RoutePoint.fromJson(r as Map<String, dynamic>))
-          .toList(),
-      distance: (json['distance'] as num).toDouble(),
-      stepCount: json['stepCount'] as int,
+      id: '${json['id']}',
+      startTime: DateTime.parse('${json['startTime']}'),
+      endTime: json['endTime'] != null ? DateTime.parse('${json['endTime']}') : null,
+      route: routeList,
+      distance: (json['distance'] as num?)?.toDouble() ?? 0.0,
+      stepCount: (json['stepCount'] as num?)?.toInt() ?? 0,
     );
   }
 }
