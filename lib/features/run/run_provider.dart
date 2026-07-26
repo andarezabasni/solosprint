@@ -1,16 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:uuid/uuid.dart';
 import 'run_activity.dart';
+import 'route_point.dart';
 import '../../core/database/activity_database.dart';
 
 class RunProvider extends ChangeNotifier {
   bool _isTracking = false;
   bool _isPaused = false;
   DateTime? _startTime;
-  List<LatLng> _route = [];
+  final List<RoutePoint> _route = [];
   double _distance = 0.0;
   StreamSubscription<Position>? _positionSubscription;
   Timer? _timer;
@@ -20,7 +20,7 @@ class RunProvider extends ChangeNotifier {
   bool get isTracking => _isTracking;
   bool get isPaused => _isPaused;
   DateTime? get startTime => _startTime;
-  List<LatLng> get route => List.unmodifiable(_route);
+  List<RoutePoint> get route => List.unmodifiable(_route);
   double get distance => _distance;
   int get elapsedSeconds => _elapsedSeconds;
   String get formattedDuration => _formatDuration(_elapsedSeconds);
@@ -38,6 +38,24 @@ class RunProvider extends ChangeNotifier {
     return '$min:$sec';
   }
 
+  /// Returns colored segments for the current route (for StatMaps rendering).
+  List<PaceSegment> get paceSegments {
+    if (_route.length < 2) return [];
+    final segments = <PaceSegment>[];
+    for (int i = 0; i < _route.length - 1; i++) {
+      final a = _route[i];
+      final b = _route[i + 1];
+      final dt = b.timestamp.difference(a.timestamp).inSeconds;
+      final distKm = Geolocator.distanceBetween(
+            a.latitude, a.longitude, b.latitude, b.longitude,
+          ) /
+          1000.0;
+      final pace = distKm > 0 ? (dt / 60) / distKm : 0.0;
+      segments.add(PaceSegment(start: a, end: b, paceMinPerKm: pace));
+    }
+    return segments;
+  }
+
   Future<bool> requestPermission() async {
     final permission = await Geolocator.requestPermission();
     return permission == LocationPermission.always ||
@@ -51,7 +69,7 @@ class RunProvider extends ChangeNotifier {
     _isTracking = true;
     _isPaused = false;
     _startTime = DateTime.now();
-    _route = [];
+    _route.clear();
     _distance = 0.0;
     _elapsedSeconds = 0;
 
@@ -66,10 +84,17 @@ class RunProvider extends ChangeNotifier {
         distanceFilter: 5,
       ),
     ).listen((position) {
-      final point = LatLng(position.latitude, position.longitude);
+      final point = RoutePoint(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        timestamp: DateTime.now(),
+      );
       if (_route.isNotEmpty) {
         final last = _route.last;
-        _distance += _calculateDistance(last, point);
+        _distance += Geolocator.distanceBetween(
+              last.latitude, last.longitude, point.latitude, point.longitude,
+            ) /
+            1000.0;
       }
       _route.add(point);
       notifyListeners();
@@ -118,13 +143,6 @@ class RunProvider extends ChangeNotifier {
     ActivityDatabase.saveActivity(activity);
     notifyListeners();
     return activity;
-  }
-
-  double _calculateDistance(LatLng p1, LatLng p2) {
-    return Geolocator.distanceBetween(
-          p1.latitude, p1.longitude, p2.latitude, p2.longitude,
-        ) /
-        1000.0; // convert to km
   }
 
   String _formatDuration(int totalSeconds) {

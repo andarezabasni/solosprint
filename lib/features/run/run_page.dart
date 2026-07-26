@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:provider/provider.dart';
 import 'run_provider.dart';
 
+
 class RunPage extends StatelessWidget {
   const RunPage({super.key});
 
@@ -24,7 +25,9 @@ class _RunPageBody extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Run')),
-      body: provider.isTracking ? _buildTrackingUI(context, provider) : _buildPreRunUI(context, provider),
+      body: provider.isTracking
+          ? _buildTrackingUI(context, provider)
+          : _buildPreRunUI(context, provider),
     );
   }
 
@@ -81,16 +84,19 @@ class _RunPageBody extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildStatItem('Distance', '${provider.distance.toStringAsFixed(2)} km'),
+              _buildStatItem(
+                  'Distance', '${provider.distance.toStringAsFixed(2)} km'),
               _buildStatItem('Duration', provider.formattedDuration),
               _buildStatItem('Pace', '${provider.formattedPace} /km'),
             ],
           ),
         ),
-        // Map
+        // Map with StatMaps colored segments
         Expanded(
-          child: _buildMap(provider),
+          child: _buildStatMap(provider),
         ),
+        // Pace legend
+        _buildPaceLegend(),
         // Controls
         Container(
           padding: const EdgeInsets.all(24),
@@ -151,15 +157,18 @@ class _RunPageBody extends StatelessWidget {
     );
   }
 
-  Widget _buildMap(RunProvider provider) {
-    final route = provider.route;
-    if (route.isEmpty) {
+  /// Render map with colored polyline segments based on pace (StatMaps).
+  Widget _buildStatMap(RunProvider provider) {
+    final segments = provider.paceSegments;
+    if (provider.route.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
+    final lastPoint = provider.route.last.latLng;
+
     return FlutterMap(
       options: MapOptions(
-        initialCenter: route.last,
+        initialCenter: lastPoint,
         initialZoom: 16.0,
       ),
       children: [
@@ -167,41 +176,69 @@ class _RunPageBody extends StatelessWidget {
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'com.solosprint.solosprint',
         ),
+        // Colored segments (StatMaps)
         PolylineLayer(
-          polylines: [
-            Polyline(
-              points: route,
-              color: const Color(0xFFFF6B35),
-              strokeWidth: 4,
-            ),
-          ],
+          polylines: segments.map((seg) {
+            return Polyline(
+              points: [seg.startLatLng, seg.endLatLng],
+              color: seg.color,
+              strokeWidth: 5,
+            );
+          }).toList(),
         ),
+        // Start marker
         MarkerLayer(
           markers: [
-            if (route.length > 1)
+            if (segments.isNotEmpty)
               Marker(
-                point: route.last,
-                width: 30,
-                height: 30,
-                child: const Icon(
-                  Icons.my_location,
-                  color: Color(0xFFFF6B35),
-                  size: 30,
-                ),
+                point: provider.route.first.latLng,
+                width: 24,
+                height: 24,
+                child: const Icon(Icons.circle, color: Color(0xFF10B981), size: 16),
               ),
+            // Current position
             Marker(
-              point: route.first,
+              point: lastPoint,
               width: 30,
               height: 30,
               child: const Icon(
-                Icons.circle,
-                color: Color(0xFF10B981),
-                size: 16,
+                Icons.my_location,
+                color: Color(0xFFFF6B35),
+                size: 30,
               ),
             ),
           ],
         ),
       ],
+    );
+  }
+
+  /// Small legend showing pace color mapping.
+  Widget _buildPaceLegend() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: Colors.white,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _legendDot(const Color(0xFF10B981)),
+          const Text(' Fast', style: TextStyle(fontSize: 11)),
+          const SizedBox(width: 12),
+          _legendDot(const Color(0xFFFBBF24)),
+          const Text(' Med', style: TextStyle(fontSize: 11)),
+          const SizedBox(width: 12),
+          _legendDot(const Color(0xFFEF4444)),
+          const Text(' Slow', style: TextStyle(fontSize: 11)),
+        ],
+      ),
+    );
+  }
+
+  Widget _legendDot(Color color) {
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 

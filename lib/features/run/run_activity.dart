@@ -1,10 +1,11 @@
-import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
+import 'route_point.dart';
 
 class RunActivity {
   final String id;
   final DateTime startTime;
   DateTime? endTime;
-  final List<LatLng> route;
+  final List<RoutePoint> route;
   double distance; // in km
   int stepCount;
 
@@ -12,7 +13,7 @@ class RunActivity {
     required this.id,
     required this.startTime,
     this.endTime,
-    List<LatLng>? route,
+    List<RoutePoint>? route,
     this.distance = 0.0,
     this.stepCount = 0,
   }) : route = route ?? [];
@@ -27,12 +28,29 @@ class RunActivity {
     return duration.inMinutes / distance;
   }
 
+  List<PaceSegment> get paceSegments {
+    if (route.length < 2) return [];
+    final segments = <PaceSegment>[];
+    for (int i = 0; i < route.length - 1; i++) {
+      final a = route[i];
+      final b = route[i + 1];
+      final dt = b.timestamp.difference(a.timestamp).inSeconds;
+      final distKm = Geolocator.distanceBetween(
+            a.latitude, a.longitude, b.latitude, b.longitude,
+          ) /
+          1000.0;
+      final pace = distKm > 0 ? (dt / 60) / distKm : 0.0;
+      segments.add(PaceSegment(start: a, end: b, paceMinPerKm: pace));
+    }
+    return segments;
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'startTime': startTime.toIso8601String(),
       'endTime': endTime?.toIso8601String(),
-      'route': route.map((l) => {'lat': l.latitude, 'lng': l.longitude}).toList(),
+      'route': route.map((r) => r.toJson()).toList(),
       'distance': distance,
       'stepCount': stepCount,
     };
@@ -46,7 +64,7 @@ class RunActivity {
           ? DateTime.parse(json['endTime'] as String)
           : null,
       route: (json['route'] as List)
-          .map((l) => LatLng(l['lat'] as double, l['lng'] as double))
+          .map((r) => RoutePoint.fromJson(r as Map<String, dynamic>))
           .toList(),
       distance: (json['distance'] as num).toDouble(),
       stepCount: json['stepCount'] as int,
