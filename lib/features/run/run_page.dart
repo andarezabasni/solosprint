@@ -164,7 +164,7 @@ class _RunPageBody extends StatelessWidget {
     final hasPos = provider.route.isNotEmpty;
     final center = hasPos
         ? provider.route.last.latLng
-        : const LatLng(-6.2, 106.8);
+        : (provider.initialPosition ?? const LatLng(-6.2, 106.8));
 
     final map = FlutterMap(
       options: MapOptions(

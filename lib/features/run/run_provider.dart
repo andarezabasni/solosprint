@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:uuid/uuid.dart';
 import 'run_activity.dart';
 import 'route_point.dart';
@@ -16,6 +17,7 @@ class RunProvider extends ChangeNotifier {
   StreamSubscription<Position>? _positionSubscription;
   Timer? _timer;
   int _elapsedSeconds = 0;
+  LatLng? _initialPosition;
   static const _uuid = Uuid();
   Timer? _notifTimer;
 
@@ -23,6 +25,7 @@ class RunProvider extends ChangeNotifier {
   bool get isPaused => _isPaused;
   DateTime? get startTime => _startTime;
   List<RoutePoint> get route => List.unmodifiable(_route);
+  LatLng? get initialPosition => _initialPosition;
   double get distance => _distance;
   int get elapsedSeconds => _elapsedSeconds;
   String get formattedDuration => _formatDuration(_elapsedSeconds);
@@ -67,6 +70,15 @@ class RunProvider extends ChangeNotifier {
   Future<void> startTracking() async {
     final hasPermission = await requestPermission();
     if (!hasPermission) return;
+
+    // Get last known position for initial map center
+    try {
+      final pos = await Geolocator.getLastKnownPosition();
+      if (pos != null) {
+        _initialPosition = LatLng(pos.latitude, pos.longitude);
+        notifyListeners();
+      }
+    } catch (_) {}
 
     _isTracking = true;
     _isPaused = false;
