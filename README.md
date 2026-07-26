@@ -1,17 +1,44 @@
-# solosprint
+# SoloSprint 🏃
 
-A new Flutter project.
+Offline running tracker for Android. Tracks GPS routes, counts steps, and helps you hit daily goals — no internet required.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+- **GPS Run Tracking** — real-time distance, pace, duration, and route map (OpenStreetMap)
+- **Step Counter** — runs in background, logs daily totals
+- **StatMaps** — route lines colored by pace (green = fast, red = slow)
+- **Weekly Summary** — circular progress bars, swipe between weeks
+- **Daily Goals** — set step & distance targets, get notifications
+- **Share Cards** — export your run as an image (Classic / Photo / Map template)
+- **Dark Mode** — toggle in Settings
+- **English / Indonesia** — pick your language
+- **Backup & Restore** — export/import all data as Hive files
 
-A few resources to get you started if this is your first Flutter project:
+## Download
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Grab the latest APK from the [Releases page](https://github.com/andarezabasni/solosprint/releases).
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Build
+
+```bash
+flutter build apk --release
+```
+
+APK will be at `build/app/outputs/flutter-apk/app-release.apk`.
+
+## Tech Stack
+
+- Flutter
+- Provider (state management)
+- Hive (local storage)
+- geolocator + flutter_map (GPS & maps)
+- pedometer (step counter)
+
+## Support
+
+- Saweria — https://saweria.co/andreza09
+- PayPal — https://www.paypal.com/paypalme/andreza110
+
+## License
+
+MIT
