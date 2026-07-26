@@ -1,10 +1,10 @@
 import 'dart:io';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 import '../../run/run_activity.dart';
 import '../share_service.dart';
 
+/// Strava-style share card: photo background + route polyline overlay + stats.
 class PhotoTemplate extends StatelessWidget {
   final RunActivity activity;
   final String? imagePath;
@@ -17,7 +17,7 @@ class PhotoTemplate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final routePoints = activity.route.map((r) => r.latLng).toList();
+    final routePts = activity.route.map((r) => r.latLng).toList();
 
     return Container(
       width: 1080,
@@ -32,23 +32,23 @@ class PhotoTemplate extends StatelessWidget {
           : const BoxDecoration(color: Color(0xFF1A1A2E)),
       child: Stack(
         children: [
-          // Dark overlay
+          // Dark gradient overlay for readability
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withValues(alpha: imagePath != null ? 0.30 : 0.0),
-                  Colors.black.withValues(alpha: imagePath != null ? 0.40 : 0.0),
-                  Colors.black.withValues(alpha: imagePath != null ? 0.55 : 0.0),
-                  Colors.black.withValues(alpha: imagePath != null ? 0.70 : 0.0),
+                  Colors.black.withValues(alpha: 0.25),
+                  Colors.black.withValues(alpha: 0.35),
+                  Colors.black.withValues(alpha: 0.50),
+                  Colors.black.withValues(alpha: 0.65),
                 ],
               ),
             ),
           ),
 
-          // Logo & Date at top
+          // Logo + date (top)
           Positioned(
             top: 60,
             left: 40,
@@ -60,80 +60,64 @@ class PhotoTemplate extends StatelessWidget {
                     const Icon(Icons.directions_run,
                         color: Color(0xFFFF6B35), size: 36),
                     const SizedBox(width: 12),
-                    const Text(
-                      'SoloSprint',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
-                        shadows: [Shadow(blurRadius: 4, color: Colors.black45)],
-                      ),
-                    ),
+                    const Text('SoloSprint',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                            shadows: [
+                              Shadow(blurRadius: 4, color: Colors.black45)
+                            ])),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  ShareService.formatDate(activity.startTime),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    shadows: [Shadow(blurRadius: 3, color: Colors.black45)],
-                  ),
-                ),
+                Text(ShareService.formatDate(activity.startTime),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        shadows: [
+                          Shadow(blurRadius: 3, color: Colors.black45)
+                        ])),
               ],
             ),
           ),
 
-          // Route polyline in the middle area (centered, moderate size)
-          if (routePoints.length >= 2)
+          // Route polyline area (middle section of photo)
+          if (routePts.length >= 2)
             Positioned(
-              left: 80,
-              right: 80,
-              top: 320,
-              bottom: 420,
-              child: CustomPaint(
-                painter: _RoutePainter(
-                  points: routePoints,
-                  color: const Color(0xFFFC4C02),
-                  strokeWidth: 14,
+              left: 60,
+              right: 60,
+              top: 300,
+              bottom: 360,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: CustomPaint(
+                  painter: _RoutePainter(
+                    points: routePts,
+                    color: const Color(0xFFFC4C02),
+                    strokeWidth: 16,
+                  ),
                 ),
               ),
             ),
 
-          // Stats at bottom (no background card)
+          // Stats row (bottom, no background card)
           Positioned(
-            left: 0,
-            right: 0,
-            bottom: 120,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _statItem(
-                      'DISTANCE',
-                      activity.distance.toStringAsFixed(1),
-                      'km',
-                    ),
-                    _statItem(
-                      'PACE',
-                      ShareService.formatPace(activity.pace),
-                      '/km',
-                    ),
-                    _statItem(
-                      'DURATION',
-                      ShareService.formatDuration(activity.duration),
-                      '',
-                    ),
-                  ],
-                ),
-              ),
+            left: 30,
+            right: 30,
+            bottom: 100,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _stat('DISTANCE', activity.distance.toStringAsFixed(1), 'km'),
+                _stat('PACE', ShareService.formatPace(activity.pace), '/km'),
+                _stat('DURATION', ShareService.formatDuration(activity.duration), ''),
+              ],
             ),
           ),
 
-          // Empty state
+          // Empty-state hint
           if (imagePath == null)
             const Center(
               child: Column(
@@ -141,10 +125,8 @@ class PhotoTemplate extends StatelessWidget {
                 children: [
                   Icon(Icons.add_a_photo, color: Colors.white54, size: 64),
                   SizedBox(height: 16),
-                  Text(
-                    'Tap "Choose Photo" to add your photo',
-                    style: TextStyle(color: Colors.white54, fontSize: 16),
-                  ),
+                  Text('Tap "Choose Photo" to add your photo',
+                      style: TextStyle(color: Colors.white54, fontSize: 16)),
                 ],
               ),
             ),
@@ -153,42 +135,36 @@ class PhotoTemplate extends StatelessWidget {
     );
   }
 
-  Widget _statItem(String label, String value, String unit) {
+  Widget _stat(String label, String value, String unit) {
     return Column(
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 14,
-            letterSpacing: 1.5,
-            shadows: [Shadow(blurRadius: 3, color: Colors.black45)],
-          ),
-        ),
+        Text(label,
+            style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+                letterSpacing: 1.5)),
         const SizedBox(height: 4),
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-                shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
-              ),
-            ),
+            Text(value,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 34,
+                    fontWeight: FontWeight.bold,
+                    shadows: [
+                      Shadow(blurRadius: 4, color: Colors.black54)
+                    ])),
             if (unit.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(left: 4, bottom: 6),
-                child: Text(
-                  unit,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    shadows: [Shadow(blurRadius: 3, color: Colors.black45)],
-                  ),
-                ),
+                padding: const EdgeInsets.only(left: 4, bottom: 5),
+                child: Text(unit,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        shadows: [
+                          Shadow(blurRadius: 3, color: Colors.black45)
+                        ])),
               ),
           ],
         ),
@@ -197,9 +173,10 @@ class PhotoTemplate extends StatelessWidget {
   }
 }
 
-/// Draws route polyline centered in the available canvas area.
+/// Paints the route polyline using GPS-to-pixel projection.
+/// Uses simple min-max normalization to guarantee the route fills the canvas area.
 class _RoutePainter extends CustomPainter {
-  final List<LatLng> _originalPoints;
+  final List<LatLng> _points;
   final Color color;
   final double strokeWidth;
 
@@ -207,16 +184,45 @@ class _RoutePainter extends CustomPainter {
     required List<LatLng> points,
     required this.color,
     required this.strokeWidth,
-  }) : _originalPoints = points;
+  }) : _points = points;
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (_originalPoints.length < 2) return;
+    if (_points.length < 2) return;
 
-    // Project GPS to pixel coordinates within the available canvas area
-    final projected = _projectToCanvas(_originalPoints, size);
+    // 1. Find bounding box of the route
+    double minLat = double.infinity, maxLat = double.negativeInfinity;
+    double minLng = double.infinity, maxLng = double.negativeInfinity;
+    for (final p in _points) {
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLng) minLng = p.longitude;
+      if (p.longitude > maxLng) maxLng = p.longitude;
+    }
 
-    // Draw polyline
+    final latRange = maxLat - minLat;
+    final lngRange = maxLng - minLng;
+    if (latRange == 0 && lngRange == 0) return;
+
+    // 2. Padding inside the canvas (12%)
+    final padX = size.width * 0.12;
+    final padY = size.height * 0.12;
+    final drawW = size.width - 2 * padX;
+    final drawH = size.height - 2 * padY;
+
+    // 3. Project each point: simple normalization to [0,1] then scale to draw area
+    final projected = <Offset>[];
+    for (final p in _points) {
+      final nx = (p.longitude - minLng) / lngRange; // 0..1
+      final ny = 1.0 - (p.latitude - minLat) / latRange; // 0..1 (flip Y)
+
+      final x = padX + nx * drawW;
+      final y = padY + ny * drawH;
+
+      projected.add(Offset(x, y));
+    }
+
+    // 4. Draw the polyline
     final paint = Paint()
       ..color = color
       ..strokeWidth = strokeWidth
@@ -231,51 +237,23 @@ class _RoutePainter extends CustomPainter {
     }
     canvas.drawPath(path, paint);
 
-    // Start marker (green)
+    // 5. Start marker (green circle)
     canvas.drawCircle(
       projected[0],
       strokeWidth * 0.7,
-      Paint()..color = const Color(0xFF10B981)..style = PaintingStyle.fill,
+      Paint()
+        ..color = const Color(0xFF10B981)
+        ..style = PaintingStyle.fill,
     );
 
-    // End marker (orange)
+    // 6. End marker (orange filled circle)
     canvas.drawCircle(
       projected.last,
       strokeWidth * 0.7,
-      Paint()..color = color..style = PaintingStyle.fill,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.fill,
     );
-  }
-
-  /// Convert GPS coords to pixel coords fitting within [size] with padding.
-  List<Offset> _projectToCanvas(List<LatLng> gps, Size size) {
-    double minLat = double.infinity, maxLat = double.negativeInfinity;
-    double minLng = double.infinity, maxLng = double.negativeInfinity;
-    for (final p in gps) {
-      if (p.latitude < minLat) minLat = p.latitude;
-      if (p.latitude > maxLat) maxLat = p.latitude;
-      if (p.longitude < minLng) minLng = p.longitude;
-      if (p.longitude > maxLng) maxLng = p.longitude;
-    }
-
-    final latRange = maxLat - minLat;
-    final lngRange = maxLng - minLng;
-    if (latRange == 0 && lngRange == 0) return [];
-
-    const pad = 0.12; // 12% padding inside the allocated area
-    final drawW = size.width * (1 - 2 * pad);
-    final drawH = size.height * (1 - 2 * pad);
-
-    final centerLat = (minLat + maxLat) / 2;
-    final centerLng = (minLng + maxLng) / 2;
-
-    // Scale to fit while preserving aspect ratio
-    final scale = math.min(drawW / lngRange, drawH / latRange);
-
-    return gps.map((p) {
-      final x = size.width / 2 + (p.longitude - centerLng) * scale;
-      final y = size.height / 2 - (p.latitude - centerLat) * scale;
-      return Offset(x, y);
-    }).toList();
   }
 
   @override
