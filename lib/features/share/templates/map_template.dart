@@ -13,119 +13,134 @@ class MapTemplate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final segments = activity.paceSegments;
-    final textColor = Colors.white;
-    final subtextColor = Colors.white70;
+    final routePoints = activity.route.map((r) => r.latLng).toList();
 
     return SizedBox(
       width: 1080,
       height: 1920,
-      child: Stack(
-        children: [
-          // Full background map
-          if (segments.length >= 2)
-            Positioned.fill(
-              child: ClipRRect(
-                child: FlutterMap(
-                  options: MapOptions(
-                    initialCenter: segments.first.startLatLng,
-                    initialZoom: 14.0,
-                    interactionOptions: const InteractionOptions(flags: InteractiveFlag.none),
-                  ),
-                  children: [
-                    TileLayer(
-                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.solosprint.solosprint',
+      child: routePoints.length < 2
+          ? Container(color: const Color(0xFF1A1A2E))
+          : Stack(
+              children: [
+                // Full background map
+                Positioned.fill(
+                  child: FlutterMap(
+                    key: ValueKey('map-${activity.id}'),
+                    options: MapOptions(
+                      initialCenter: routePoints.first,
+                      initialZoom: 14.0,
+                      interactionOptions: const InteractionOptions(
+                        flags: InteractiveFlag.none,
+                      ),
                     ),
-                    PolylineLayer(
-                      polylines: [
-                        Polyline(
-                          points: activity.route.map((r) => r.latLng).toList(),
-                          color: const Color(0xFFFC4C02),
-                          strokeWidth: 6,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          if (segments.length < 2)
-            Positioned.fill(
-              child: Container(color: const Color(0xFF1A1A2E)),
-            ),
-
-          // Dark overlay at bottom
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Color(0xDD000000)],
-                ),
-              ),
-              padding: const EdgeInsets.fromLTRB(40, 80, 40, 40),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Logo
-                  Row(
                     children: [
-                      const Icon(Icons.directions_run, color: Color(0xFFFF6B35), size: 36),
-                      const SizedBox(width: 12),
-                      Text(
-                        'SoloSprint',
-                        style: TextStyle(
-                          color: textColor,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                        ),
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.solosprint.solosprint',
+                      ),
+                      // Segment-based polyline
+                      PolylineLayer(
+                        polylines: [
+                          for (int i = 0; i < routePoints.length - 1; i++)
+                            Polyline(
+                              points: [routePoints[i], routePoints[i + 1]],
+                              color: const Color(0xFFFC4C02),
+                              strokeWidth: 6,
+                            ),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    ShareService.formatDate(activity.startTime),
-                    style: TextStyle(color: subtextColor, fontSize: 18),
-                  ),
-                  const SizedBox(height: 24),
+                ),
 
-                  // Stats row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _statItem('DISTANCE', activity.distance.toStringAsFixed(2), 'km', textColor, subtextColor),
-                      _statItem('PACE', ShareService.formatPace(activity.pace), '/km', textColor, subtextColor),
-                      _statItem('DURATION', ShareService.formatDuration(activity.duration), '', textColor, subtextColor),
-                    ],
+                // Dark overlay at bottom with gradient
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Color(0xDD000000)],
+                      ),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(40, 80, 40, 40),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Logo
+                        Row(
+                          children: [
+                            const Icon(Icons.directions_run,
+                                color: Color(0xFFFF6B35), size: 36),
+                            const SizedBox(width: 12),
+                            Text(
+                              'SoloSprint',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          ShareService.formatDate(activity.startTime),
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 18),
+                        ),
+                        const SizedBox(height: 24),
+                        // Stats row
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _statItem('DISTANCE',
+                                activity.distance.toStringAsFixed(2), 'km'),
+                            _statItem(
+                                'PACE',
+                                ShareService.formatPace(activity.pace),
+                                '/km'),
+                            _statItem(
+                                'DURATION',
+                                ShareService.formatDuration(activity.duration),
+                                ''),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 
-  Widget _statItem(String label, String value, String unit, Color textColor, Color subtextColor) {
+  Widget _statItem(String label, String value, String unit) {
     return Column(
       children: [
-        Text(label, style: TextStyle(color: subtextColor, fontSize: 14, letterSpacing: 1.5)),
+        Text(label,
+            style: const TextStyle(
+                color: Colors.white70, fontSize: 14, letterSpacing: 1.5)),
         const SizedBox(height: 6),
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(value, style: TextStyle(color: textColor, fontSize: 32, fontWeight: FontWeight.bold)),
+            Text(value,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold)),
             if (unit.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(left: 4, bottom: 6),
-                child: Text(unit, style: TextStyle(color: subtextColor, fontSize: 16)),
+                child: Text(unit,
+                    style: const TextStyle(
+                        color: Colors.white70, fontSize: 16)),
               ),
           ],
         ),

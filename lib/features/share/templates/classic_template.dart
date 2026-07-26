@@ -19,7 +19,7 @@ class ClassicTemplate extends StatelessWidget {
     final textColor = darkMode ? Colors.white : const Color(0xFF1A1A2E);
     final subtextColor = darkMode ? Colors.white70 : Colors.grey[700]!;
     final cardBg = darkMode ? const Color(0xFF252540) : const Color(0xFFF5F5F5);
-    final segments = activity.paceSegments;
+    final routePoints = activity.route.map((r) => r.latLng).toList();
 
     return Container(
       width: 1080,
@@ -54,30 +54,35 @@ class ClassicTemplate extends StatelessWidget {
 
           // Route polyline
           Expanded(
-            child: segments.length < 2
+            child: routePoints.length < 2
                 ? Center(
                     child: Icon(Icons.route, size: 120, color: subtextColor),
                   )
                 : ClipRRect(
                     borderRadius: BorderRadius.circular(24),
                     child: FlutterMap(
+                      key: ValueKey('classic-${activity.id}'),
                       options: MapOptions(
-                        initialCenter: segments.first.startLatLng,
+                        initialCenter: routePoints.first,
                         initialZoom: 15.0,
-                        interactionOptions: const InteractionOptions(flags: InteractiveFlag.none),
+                        interactionOptions: const InteractionOptions(
+                          flags: InteractiveFlag.none,
+                        ),
                       ),
                       children: [
                         TileLayer(
                           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                           userAgentPackageName: 'com.solosprint.solosprint',
                         ),
+                        // Render as individual segment polylines for reliability
                         PolylineLayer(
                           polylines: [
-                            Polyline(
-                              points: activity.route.map((r) => r.latLng).toList(),
-                              color: const Color(0xFFFC4C02),
-                              strokeWidth: 6,
-                            ),
+                            for (int i = 0; i < routePoints.length - 1; i++)
+                              Polyline(
+                                points: [routePoints[i], routePoints[i + 1]],
+                                color: const Color(0xFFFC4C02),
+                                strokeWidth: 6,
+                              ),
                           ],
                         ),
                       ],
@@ -86,7 +91,7 @@ class ClassicTemplate extends StatelessWidget {
           ),
           const SizedBox(height: 32),
 
-          // Stats row
+          // Stats card
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
