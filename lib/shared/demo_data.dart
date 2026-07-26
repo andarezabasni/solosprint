@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'package:latlong2/latlong.dart';
 import 'package:uuid/uuid.dart';
 import '../features/run/run_activity.dart';
 import '../features/run/route_point.dart';
@@ -9,157 +8,199 @@ class DemoData {
   static const _uuid = Uuid();
   static final _rng = math.Random(42);
 
-  /// Generate route points along a list of waypoints with smooth curves.
-  static List<RoutePoint> _generateRouteFromWaypoints({
-    required List<LatLng> waypoints,
+  /// Generate route following a city grid pattern (realistic street layout).
+  static List<RoutePoint> _gridRoute({
+    required double startLat,
+    required double startLng,
     required DateTime startTime,
-    int pointsPerSegment = 15,
-    double jitterMeters = 8,
+    required int blocks, // number of blocks to traverse
+    double blockSizeDeg = 0.0018, // ~200m per block
   }) {
     final points = <RoutePoint>[];
     var time = startTime;
+    // Direction sequence: 0=up, 1=right, 2=down, 3=left
+    final dirs = [0, 1, 0, 1, 2, 1, 2, 3, 0, 3, 0, 1, 2, 3, 0, 1];
 
-    for (int w = 0; w < waypoints.length; w++) {
-      final from = waypoints[w];
-      final to = waypoints[(w + 1) % waypoints.length];
+    var lat = startLat;
+    var lng = startLng;
 
-      for (int j = 0; j < pointsPerSegment; j++) {
-        final t = (j + 1) / pointsPerSegment;
+    // First point
+    time = time.add(const Duration(seconds: 1));
+    points.add(RoutePoint(latitude: lat, longitude: lng, timestamp: time));
 
-        // Smoothstep interpolation for organic curve
-        final s = t * t * (3 - 2 * t);
-        var lat = from.latitude + (to.latitude - from.latitude) * s;
-        var lng = from.longitude + (to.longitude - from.longitude) * s;
+    for (int d = 0; d < dirs.length && d < blocks; d++) {
+      final dir = dirs[d];
+      // Each block = 20 steps with slight curve
+      for (int s = 0; s < 20; s++) {
+        final t = (s + 1) / 20.0;
+        final smooth = t * t * (3 - 2 * t); // smoothstep
 
-        // Add slight outward curve
-        final perpLat = -(to.longitude - from.longitude);
-        final perpLng = to.latitude - from.latitude;
-        final perpLen = math.sqrt(perpLat * perpLat + perpLng * perpLng);
-        if (perpLen > 0) {
-          final bulge = 0.00015 * math.sin(t * math.pi);
-          lat += perpLat / perpLen * bulge;
-          lng += perpLng / perpLen * bulge;
+        // Move in grid direction
+        double newLat = lat;
+        double newLng = lng;
+        switch (dir) {
+          case 0: // up (north)
+            newLat += blockSizeDeg * smooth * 0.1;
+            newLng += 0.00005 * math.sin(s * 0.5);
+            break;
+          case 1: // right (east)
+            newLng += blockSizeDeg * smooth * 0.1;
+            newLat += 0.00005 * math.cos(s * 0.3);
+            break;
+          case 2: // down (south)
+            newLat -= blockSizeDeg * smooth * 0.1;
+            newLng += 0.00005 * math.sin(s * 0.4);
+            break;
+          case 3: // left (west)
+            newLng -= blockSizeDeg * smooth * 0.1;
+            newLat += 0.00005 * math.cos(s * 0.3);
+            break;
         }
 
-        // Random jitter
-        lat += (_rng.nextDouble() - 0.5) * 2 * jitterMeters / 111300;
-        lng += (_rng.nextDouble() - 0.5) * 2 * jitterMeters / 111300;
+        // Corner transition: slight curve at end of each block
+        if (s > 15) {
+          final cornerWeight = (s - 15) / 5.0;
+          final nextDir = dirs[(d + 1) % dirs.length];
+          switch (nextDir) {
+            case 0:
+              newLat += blockSizeDeg * 0.02 * cornerWeight;
+              break;
+            case 1:
+              newLng += blockSizeDeg * 0.02 * cornerWeight;
+              break;
+            case 2:
+              newLat -= blockSizeDeg * 0.02 * cornerWeight;
+              break;
+            case 3:
+              newLng -= blockSizeDeg * 0.02 * cornerWeight;
+              break;
+          }
+        }
 
-        time = time.add(Duration(seconds: 5 + _rng.nextInt(8)));
+        lat = newLat;
+        lng = newLng;
+
+        time = time.add(Duration(milliseconds: 400 + _rng.nextInt(300)));
         points.add(RoutePoint(latitude: lat, longitude: lng, timestamp: time));
       }
+    }
+
+    // Close the loop: return toward start
+    for (int i = 0; i < 30; i++) {
+      final t = (i + 1) / 30.0;
+      lat += (startLat - lat) * t * 0.1;
+      lng += (startLng - lng) * t * 0.1;
+      lat += (_rng.nextDouble() - 0.5) * 0.00005;
+      lng += (_rng.nextDouble() - 0.5) * 0.00005;
+      time = time.add(Duration(milliseconds: 400 + _rng.nextInt(200)));
+      points.add(RoutePoint(latitude: lat, longitude: lng, timestamp: time));
+    }
+
+    return points;
+  }
+
+  /// Generate an out-and-back route (lurus lalu balik).
+  static List<RoutePoint> _outAndBackRoute({
+    required double startLat,
+    required double startLng,
+    required DateTime startTime,
+    required double lengthDeg,
+  }) {
+    final points = <RoutePoint>[];
+    var time = startTime;
+    var lat = startLat;
+    var lng = startLng;
+
+    // Go east
+    for (int i = 0; i < 40; i++) {
+      lng += lengthDeg / 40;
+      lat += (_rng.nextDouble() - 0.5) * 0.00008;
+      time = time.add(Duration(milliseconds: 500 + _rng.nextInt(300)));
+      points.add(RoutePoint(latitude: lat, longitude: lng, timestamp: time));
+    }
+    // Turn around and go west
+    for (int i = 0; i < 40; i++) {
+      lng -= lengthDeg / 40;
+      lat += (_rng.nextDouble() - 0.5) * 0.00008;
+      time = time.add(Duration(milliseconds: 500 + _rng.nextInt(300)));
+      points.add(RoutePoint(latitude: lat, longitude: lng, timestamp: time));
     }
     return points;
   }
 
-  // ─── Run A: Monas (Jakarta Pusat) → Bundaran HI → GPI → balik ───
-  // Loop ikonik di pusat Jakarta
+  // ─── Run A: Jakarta (Menteng) ~5km ───
+  // Grid route di area Menteng, Jakarta Pusat
   static RunActivity _jakartaRun() {
     final start = DateTime.now().subtract(const Duration(days: 1));
-    final route = _generateRouteFromWaypoints(
-      waypoints: [
-        const LatLng(-6.1754, 106.8272), // Monas
-        const LatLng(-6.1887, 106.8233), // Tugu Tani
-        const LatLng(-6.1951, 106.8229), // Stasiun Gambir
-        const LatLng(-6.2007, 106.8227), // Harmoni
-        const LatLng(-6.2114, 106.8199), // Sarinah
-        const LatLng(-6.2146, 106.8175), // Bundaran HI
-        const LatLng(-6.2082, 106.8083), // Kedubes Jerman
-        const LatLng(-6.1943, 106.8048), // Grand Indonesia
-        const LatLng(-6.1845, 106.8096), // Stasiun Gondangdia
-        const LatLng(-6.1784, 106.8185), // Lapangan Banteng
-        const LatLng(-6.1754, 106.8272), // kembali ke Monas
-      ],
+    final route = _gridRoute(
+      startLat: -6.1982,
+      startLng: 106.8320,
       startTime: start,
-      pointsPerSegment: 10,
+      blocks: 16,
+      blockSizeDeg: 0.0015,
     );
+    final end = route.last.timestamp;
     return RunActivity(
-      id: _uuid.v4(), startTime: start, endTime: route.last.timestamp,
+      id: _uuid.v4(), startTime: start, endTime: end,
       route: route, distance: 5.0,
     );
   }
 
-  // ─── Run B:沿 Pantai Losari (Makassar) ───
-  // Lari menyusuri pantai, bentuk out-and-back
+  // ─── Run B: Makassar (Pantai Losari) ~3km ───
+  // Out-and-back di sepanjang pantai
   static RunActivity _makassarRun() {
     final start = DateTime.now().subtract(const Duration(days: 3));
-    final route = _generateRouteFromWaypoints(
-      waypoints: [
-        const LatLng(-5.1369, 119.4103), // Anjungan Pantai Losari
-        const LatLng(-5.1373, 119.4064),
-        const LatLng(-5.1379, 119.4020),
-        const LatLng(-5.1387, 119.3975),
-        const LatLng(-5.1399, 119.3934), // Titik balik
-        const LatLng(-5.1387, 119.3975),
-        const LatLng(-5.1379, 119.4020),
-        const LatLng(-5.1373, 119.4064),
-        const LatLng(-5.1369, 119.4103), // kembali
-      ],
+    final route = _outAndBackRoute(
+      startLat: -5.1375,
+      startLng: 119.4050,
       startTime: start,
-      pointsPerSegment: 8,
-      jitterMeters: 5,
+      lengthDeg: 0.018,
     );
+    final end = route.last.timestamp;
     return RunActivity(
-      id: _uuid.v4(), startTime: start, endTime: route.last.timestamp,
-      route: route, distance: 3.2,
+      id: _uuid.v4(), startTime: start, endTime: end,
+      route: route, distance: 3.0,
     );
   }
 
-  // ─── Run C: Alun-Alun Bandung ───
-  // Lari keliling area Alun-Alun Bandung dan sekitarnya
+  // ─── Run C: Bandung (Dago) ~2.5km ───
+  // Grid route kecil di area Dago
   static RunActivity _bandungRun() {
     final start = DateTime.now().subtract(const Duration(days: 7));
-    final route = _generateRouteFromWaypoints(
-      waypoints: [
-        const LatLng(-6.9219, 107.6068), // Alun-Alun Bandung
-        const LatLng(-6.9190, 107.6073), // Jl. Asia Afrika
-        const LatLng(-6.9165, 107.6058), // Museum Konferensi
-        const LatLng(-6.9147, 107.6073), // Jl. Braga
-        const LatLng(-6.9148, 107.6110), // Braga atas
-        const LatLng(-6.9164, 107.6141), // Jl. Merdeka
-        const LatLng(-6.9191, 107.6137), // Gedung Sate area
-        const LatLng(-6.9218, 107.6119), // Jl. Diponegoro
-        const LatLng(-6.9228, 107.6093), // Kembali ke Alun-Alun
-        const LatLng(-6.9219, 107.6068),
-      ],
+    final route = _gridRoute(
+      startLat: -6.8762,
+      startLng: 107.6172,
       startTime: start,
-      pointsPerSegment: 8,
+      blocks: 10,
+      blockSizeDeg: 0.0012,
     );
+    final end = route.last.timestamp;
     return RunActivity(
-      id: _uuid.v4(), startTime: start, endTime: route.last.timestamp,
-      route: route, distance: 2.1,
+      id: _uuid.v4(), startTime: start, endTime: end,
+      route: route, distance: 2.5,
     );
   }
 
-  // ─── Run D: Taman Bungkul (Surabaya) ───
-  // Lari keliling area kampus ITS dan Taman Bungkul
+  // ─── Run D: Surabaya (Tunjungan) ~8km ───
+  // Grid route besar di pusat Surabaya
   static RunActivity _surabayaRun() {
     final start = DateTime.now().subtract(const Duration(days: 14));
-    final route = _generateRouteFromWaypoints(
-      waypoints: [
-        const LatLng(-7.2929, 112.7363), // Taman Bungkul
-        const LatLng(-7.2937, 112.7395),
-        const LatLng(-7.2951, 112.7426),
-        const LatLng(-7.2972, 112.7445), // Jl. Raya ITS
-        const LatLng(-7.3000, 112.7442),
-        const LatLng(-7.3025, 112.7430),
-        const LatLng(-7.3045, 112.7408), // Gebang
-        const LatLng(-7.3032, 112.7377),
-        const LatLng(-7.3002, 112.7359),
-        const LatLng(-7.2975, 112.7362), // belok
-        const LatLng(-7.2952, 112.7368),
-        const LatLng(-7.2929, 112.7363), // kembali
-      ],
+    final route = _gridRoute(
+      startLat: -7.2575,
+      startLng: 112.7390,
       startTime: start,
-      pointsPerSegment: 10,
+      blocks: 24,
+      blockSizeDeg: 0.0020,
     );
+    final end = route.last.timestamp;
     return RunActivity(
-      id: _uuid.v4(), startTime: start, endTime: route.last.timestamp,
-      route: route, distance: 10.2,
+      id: _uuid.v4(), startTime: start, endTime: end,
+      route: route, distance: 8.0,
     );
   }
 
   static Future<void> loadAll() async {
+    await ActivityDatabase.clearAll();
     final runs = [_jakartaRun(), _makassarRun(), _bandungRun(), _surabayaRun()];
     for (final run in runs) {
       await ActivityDatabase.saveActivity(run);

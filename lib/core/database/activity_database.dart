@@ -49,6 +49,12 @@ class ActivityDatabase {
     return getActivitiesInRange(start, end).length;
   }
 
+  /// Clear all stored activities and goals.
+  static Future<void> clearAll() async {
+    await _box.clear();
+    await _goalsBox.clear();
+  }
+
   // Goals
   static Future<void> saveGoal(String key, double value) async {
     await _goalsBox.put(key, value);
