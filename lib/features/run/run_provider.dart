@@ -84,13 +84,16 @@ class RunProvider extends ChangeNotifier {
     final hasPermission = await requestPermission();
     if (!hasPermission) return;
 
-    // Get last known position for initial map center
+    // Get current location for map center
     try {
-      final pos = await Geolocator.getLastKnownPosition();
-      if (pos != null) {
-        _initialPosition = LatLng(pos.latitude, pos.longitude);
-        notifyListeners();
-      }
+      // Try last known first, then request current
+      var pos = await Geolocator.getLastKnownPosition();
+      pos ??= await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.low,
+        timeLimit: const Duration(seconds: 10),
+      );
+      _initialPosition = LatLng(pos.latitude, pos.longitude);
+      notifyListeners();
     } catch (_) {}
 
     _isTracking = true;
