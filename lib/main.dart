@@ -4,6 +4,7 @@ import 'core/theme.dart';
 import 'core/theme_provider.dart';
 import 'core/language_provider.dart';
 import 'core/database/activity_database.dart';
+import 'shared/widgets/app_logo.dart';
 import 'features/home/home_page.dart';
 import 'features/home/step_provider.dart';
 import 'features/run/run_page.dart';
@@ -11,9 +12,8 @@ import 'features/history/history_page.dart';
 import 'features/stats/stats_page.dart';
 import 'features/settings/settings_page.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await ActivityDatabase.init();
   runApp(const SoloSprintApp());
 }
 
@@ -26,11 +26,18 @@ class SoloSprintApp extends StatefulWidget {
 
 class _SoloSprintAppState extends State<SoloSprintApp> {
   final _themeProvider = ThemeProvider();
+  bool _ready = false;
 
   @override
   void initState() {
     super.initState();
+    _init();
+  }
+
+  Future<void> _init() async {
+    await ActivityDatabase.init();
     _themeProvider.init();
+    setState(() => _ready = true);
   }
 
   @override
@@ -49,9 +56,46 @@ class _SoloSprintAppState extends State<SoloSprintApp> {
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: theme.themeMode,
-            home: const MainShell(),
+            home: _ready ? const MainShell() : const SplashScreen(),
           );
         },
+      ),
+    );
+  }
+}
+
+/// Splash screen shown while Hive initializes.
+class SplashScreen extends StatelessWidget {
+  const SplashScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const AppLogo(size: 80),
+            const SizedBox(height: 20),
+            Text(
+              'SoloSprint',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFFFF6B35),
+                  ),
+            ),
+            const SizedBox(height: 40),
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Color(0xFFFF6B35),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

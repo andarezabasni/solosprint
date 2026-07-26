@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
+import '../../../shared/widgets/app_logo.dart';
 import '../../run/run_activity.dart';
 import '../share_service.dart';
 
@@ -57,8 +58,7 @@ class PhotoTemplate extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.directions_run,
-                        color: Color(0xFFFF6B35), size: 36),
+                    const AppLogo(size: 36),
                     const SizedBox(width: 12),
                     const Text('SoloSprint',
                         style: TextStyle(

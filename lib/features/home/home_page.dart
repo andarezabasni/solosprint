@@ -5,6 +5,7 @@ import '../../core/database/activity_database.dart';
 import '../../core/language_provider.dart';
 import '../../shared/localization.dart';
 import '../../shared/widgets/weekly_summary.dart';
+import '../../shared/widgets/app_logo.dart';
 import '../settings/settings_page.dart';
 import 'step_provider.dart';
 import 'onboarding_dialog.dart';
@@ -95,7 +96,13 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(Strings.appName),
+        title: Row(
+          children: [
+            const AppLogo(size: 28),
+            const SizedBox(width: 10),
+            Text(Strings.appName, style: const TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

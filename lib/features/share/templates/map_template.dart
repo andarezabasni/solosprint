@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import '../../../shared/widgets/app_logo.dart';
 import '../../run/run_activity.dart';
 import '../share_service.dart';
 
@@ -77,8 +78,7 @@ class MapTemplate extends StatelessWidget {
                         // Logo
                         Row(
                           children: [
-                            const Icon(Icons.directions_run,
-                                color: Color(0xFFFF6B35), size: 36),
+                            const AppLogo(size: 36),
                             const SizedBox(width: 12),
                             Text(
                               'SoloSprint',

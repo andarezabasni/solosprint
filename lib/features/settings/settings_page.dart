@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme_provider.dart';
 import '../../core/language_provider.dart';
 import '../../shared/localization.dart';
+import '../../shared/widgets/app_logo.dart';
 import '../../shared/demo_data.dart';
 import 'goals_page.dart';
 
@@ -100,8 +101,7 @@ class SettingsPage extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.directions_run,
-                          color: Color(0xFFFF6B35), size: 20),
+                      const AppLogo(size: 24),
                       const SizedBox(width: 8),
                       Text(
                         'SoloSprint',

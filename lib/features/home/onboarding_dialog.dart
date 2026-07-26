@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/database/activity_database.dart';
 import '../../core/theme.dart';
 import '../../shared/localization.dart';
+import '../../shared/widgets/app_logo.dart';
 
 class OnboardingDialog extends StatefulWidget {
   const OnboardingDialog({super.key});
@@ -33,7 +34,7 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.directions_run, size: 48, color: AppTheme.accent),
+            const AppLogo(size: 64),
             const SizedBox(height: 16),
             const Text(
               'Choose your language / Pilih bahasa:',
