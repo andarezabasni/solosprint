@@ -85,20 +85,24 @@ class PhotoTemplate extends StatelessWidget {
 
           // Route polyline area (middle section of photo)
           if (routePts.length >= 2)
-            Positioned(
+            Positioned.fill(
               left: 60,
               right: 60,
               top: 300,
               bottom: 360,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
-                child: CustomPaint(
-                  painter: _RoutePainter(
-                    points: routePts,
-                    color: const Color(0xFFFC4C02),
-                    strokeWidth: 16,
-                  ),
-                  child: const SizedBox.expand(),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return CustomPaint(
+                      size: Size(constraints.maxWidth, constraints.maxHeight),
+                      painter: _RoutePainter(
+                        points: routePts,
+                        color: const Color(0xFFFC4C02),
+                        strokeWidth: 16,
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
