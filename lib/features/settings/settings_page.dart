@@ -118,6 +118,59 @@ class SettingsPage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
+          // Support Developer
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.favorite, color: Colors.red[400], size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Support Developer',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'If you like this app, consider supporting:',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _supportButton(
+                          icon: Icons.coffee_outlined,
+                          label: 'Saweria',
+                          color: const Color(0xFFFFA726),
+                          url: 'https://saweria.co/andreza09',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _supportButton(
+                          icon: Icons.payments_outlined,
+                          label: 'PayPal',
+                          color: const Color(0xFF0070BA),
+                          url: 'https://www.paypal.com/paypalme/andreza110',
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
           // Credits / Watermark
           Card(
             child: Padding(
@@ -204,6 +257,25 @@ class SettingsPage extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _supportButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required String url,
+  }) {
+    return OutlinedButton.icon(
+      onPressed: () => _openUrl(url),
+      icon: Icon(icon, size: 18, color: color),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        side: BorderSide(color: color.withValues(alpha: 0.4)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.symmetric(vertical: 12),
       ),
     );
   }

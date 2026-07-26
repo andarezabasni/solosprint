@@ -81,7 +81,7 @@ class _SetupGuideState extends State<SetupGuide> {
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: _finish,
+                    onPressed: () => _finish(),
                     child: Text(
                       _isEnglish ? 'Skip' : 'Lewati',
                       style: TextStyle(color: Colors.grey[500]),
@@ -121,7 +121,7 @@ class _SetupGuideState extends State<SetupGuide> {
                     Expanded(
                       flex: _step == 0 ? 1 : 2,
                       child: ElevatedButton(
-                        onPressed: _step < _steps.length - 1 ? _next : _finish,
+                        onPressed: _step < _steps.length - 1 ? _next : () => _finish(),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.accent,
                           foregroundColor: Colors.white,
@@ -400,7 +400,7 @@ class _SetupGuideState extends State<SetupGuide> {
     setState(() => _step++);
   }
 
-  void _finish() {
+  Future<void> _finish() async {
     // Save preferences
     if (_isEnglish) {
       AppLocale.setEnglish();
@@ -409,11 +409,11 @@ class _SetupGuideState extends State<SetupGuide> {
     }
     final steps = int.tryParse(_stepCtrl.text) ?? 8000;
     final dist = double.tryParse(_distCtrl.text) ?? 5.0;
-    ActivityDatabase.saveGoal('daily_step_target', steps.toDouble());
-    ActivityDatabase.saveGoal('daily_dist_target', dist);
-    ActivityDatabase.setOnboardingDone();
+    await ActivityDatabase.saveGoal('daily_step_target', steps.toDouble());
+    await ActivityDatabase.saveGoal('daily_dist_target', dist);
+    await ActivityDatabase.setOnboardingDone();
 
-    Navigator.of(context).pop();
+    if (mounted) Navigator.of(context).pop();
   }
 }
 
