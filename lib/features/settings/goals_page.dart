@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/database/activity_database.dart';
+import '../../shared/localization.dart';
 
 class GoalsPage extends StatefulWidget {
   const GoalsPage({super.key});
@@ -9,6 +10,8 @@ class GoalsPage extends StatefulWidget {
 }
 
 class _GoalsPageState extends State<GoalsPage> {
+  late TextEditingController _dailyStepController;
+  late TextEditingController _dailyDistController;
   late TextEditingController _weeklyDistanceController;
   late TextEditingController _weeklyDurationController;
   late TextEditingController _weeklyRunsController;
@@ -19,6 +22,12 @@ class _GoalsPageState extends State<GoalsPage> {
   @override
   void initState() {
     super.initState();
+    _dailyStepController = TextEditingController(
+      text: _formatInt(ActivityDatabase.getGoal('daily_step_target', defaultValue: 8000)),
+    );
+    _dailyDistController = TextEditingController(
+      text: _formatGoal(ActivityDatabase.getGoal('daily_dist_target')),
+    );
     _weeklyDistanceController = TextEditingController(
       text: _formatGoal(ActivityDatabase.getGoal('weekly_distance')),
     );
@@ -41,6 +50,8 @@ class _GoalsPageState extends State<GoalsPage> {
 
   @override
   void dispose() {
+    _dailyStepController.dispose();
+    _dailyDistController.dispose();
     _weeklyDistanceController.dispose();
     _weeklyDurationController.dispose();
     _weeklyRunsController.dispose();
@@ -54,7 +65,13 @@ class _GoalsPageState extends State<GoalsPage> {
     return value > 0 ? value.toStringAsFixed(1) : '';
   }
 
+  String _formatInt(double value) {
+    return value > 0 ? value.toInt().toString() : '';
+  }
+
   void _saveGoals() {
+    ActivityDatabase.saveGoal('daily_step_target', double.tryParse(_dailyStepController.text) ?? 8000);
+    ActivityDatabase.saveGoal('daily_dist_target', double.tryParse(_dailyDistController.text) ?? 0);
     ActivityDatabase.saveGoal('weekly_distance', double.tryParse(_weeklyDistanceController.text) ?? 0);
     ActivityDatabase.saveGoal('weekly_duration', double.tryParse(_weeklyDurationController.text) ?? 0);
     ActivityDatabase.saveGoal('weekly_runs', double.tryParse(_weeklyRunsController.text) ?? 0);
@@ -64,7 +81,7 @@ class _GoalsPageState extends State<GoalsPage> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Goals saved')),
+        SnackBar(content: Text(AppLocale.isEnglish ? 'Goals saved' : 'Target tersimpan')),
       );
     }
   }
@@ -73,11 +90,14 @@ class _GoalsPageState extends State<GoalsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Goals'),
+        title: Text(AppLocale.isEnglish ? 'Goals' : 'Target'),
         actions: [
           TextButton(
             onPressed: _saveGoals,
-            child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(
+              Strings.save,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -86,33 +106,101 @@ class _GoalsPageState extends State<GoalsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Weekly Goals', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+            // Daily Goals
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.today, color: Color(0xFFFF6B35), size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    AppLocale.isEnglish ? 'Daily Goals' : 'Target Harian',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildGoalField(
+              AppLocale.isEnglish ? 'Daily Steps Target' : 'Target Langkah Harian',
+              _dailyStepController,
+              suffix: 'steps',
+            ),
             const SizedBox(height: 12),
-            _buildGoalField('Distance (km)', _weeklyDistanceController),
-            const SizedBox(height: 12),
-            _buildGoalField('Duration (min)', _weeklyDurationController),
-            const SizedBox(height: 12),
-            _buildGoalField('Runs', _weeklyRunsController),
+            _buildGoalField(
+              AppLocale.isEnglish ? 'Daily Distance (km)' : 'Jarak Harian (km)',
+              _dailyDistController,
+              suffix: 'km',
+            ),
+
             const SizedBox(height: 32),
-            Text('Monthly Goals', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+            const Divider(),
+            const SizedBox(height: 8),
+
+            // Weekly Goals
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.date_range, color: Color(0xFFFF6B35), size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    Strings.weeklyGoals,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildGoalField(Strings.distanceKm, _weeklyDistanceController, suffix: 'km'),
             const SizedBox(height: 12),
-            _buildGoalField('Distance (km)', _monthlyDistanceController),
+            _buildGoalField(Strings.durationMin, _weeklyDurationController, suffix: 'min'),
             const SizedBox(height: 12),
-            _buildGoalField('Duration (min)', _monthlyDurationController),
+            _buildGoalField(Strings.runs, _weeklyRunsController, suffix: ''),
+
+            const SizedBox(height: 32),
+            const Divider(),
+            const SizedBox(height: 8),
+
+            // Monthly Goals
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.calendar_month, color: Color(0xFFFF6B35), size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    Strings.monthlyGoals,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildGoalField(Strings.distanceKm, _monthlyDistanceController, suffix: 'km'),
             const SizedBox(height: 12),
-            _buildGoalField('Runs', _monthlyRunsController),
+            _buildGoalField(Strings.durationMin, _monthlyDurationController, suffix: 'min'),
+            const SizedBox(height: 12),
+            _buildGoalField(Strings.runs, _monthlyRunsController, suffix: ''),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildGoalField(String label, TextEditingController controller) {
+  Widget _buildGoalField(String label, TextEditingController controller, {String suffix = ''}) {
     return TextField(
       controller: controller,
       keyboardType: TextInputType.number,
       decoration: InputDecoration(
         labelText: label,
+        suffixText: suffix.isNotEmpty ? suffix : null,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
