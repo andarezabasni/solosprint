@@ -80,13 +80,10 @@ class RunProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> startTracking() async {
-    final hasPermission = await requestPermission();
-    if (!hasPermission) return;
-
-    // Get current location for map center
+  /// Fetch current GPS position (for initial map center).
+  Future<void> fetchPosition() async {
+    if (!await requestPermission()) return;
     try {
-      // Try last known first, then request current
       var pos = await Geolocator.getLastKnownPosition();
       pos ??= await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.low,
@@ -95,6 +92,13 @@ class RunProvider extends ChangeNotifier {
       _initialPosition = LatLng(pos.latitude, pos.longitude);
       notifyListeners();
     } catch (_) {}
+  }
+
+  Future<void> startTracking() async {
+    final hasPermission = await requestPermission();
+    if (!hasPermission) return;
+
+    if (_initialPosition == null) await fetchPosition();
 
     _isTracking = true;
     _isPaused = false;

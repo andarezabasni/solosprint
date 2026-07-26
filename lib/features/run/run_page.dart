@@ -17,8 +17,24 @@ class RunPage extends StatelessWidget {
   }
 }
 
-class _RunPageBody extends StatelessWidget {
+class _RunPageBody extends StatefulWidget {
   const _RunPageBody();
+
+  @override
+  State<_RunPageBody> createState() => _RunPageBodyState();
+}
+
+class _RunPageBodyState extends State<_RunPageBody> {
+  bool _fetchedPos = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_fetchedPos) {
+      _fetchedPos = true;
+      context.read<RunProvider>().fetchPosition();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
