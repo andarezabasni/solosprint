@@ -116,7 +116,7 @@ class _DayCircle extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                   color: isComplete
                       ? Colors.white
-                      : AppTheme.textPrimary,
+                      : const Color(0xFF1A1A2E),
                 ),
               ),
             ),

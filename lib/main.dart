@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/theme.dart';
+import 'core/theme_provider.dart';
+import 'core/language_provider.dart';
 import 'core/database/activity_database.dart';
 import 'features/home/home_page.dart';
 import 'features/home/step_provider.dart';
@@ -15,20 +17,41 @@ void main() async {
   runApp(const SoloSprintApp());
 }
 
-class SoloSprintApp extends StatelessWidget {
+class SoloSprintApp extends StatefulWidget {
   const SoloSprintApp({super.key});
+
+  @override
+  State<SoloSprintApp> createState() => _SoloSprintAppState();
+}
+
+class _SoloSprintAppState extends State<SoloSprintApp> {
+  final _themeProvider = ThemeProvider();
+
+  @override
+  void initState() {
+    super.initState();
+    _themeProvider.init();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider.value(value: _themeProvider),
+        ChangeNotifierProvider(create: (_) => LanguageProvider()),
         ChangeNotifierProvider(create: (_) => StepProvider()..startListening()),
       ],
-      child: MaterialApp(
-        title: 'SoloSprint',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        home: const MainShell(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, theme, _) {
+          return MaterialApp(
+            title: 'SoloSprint',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: theme.themeMode,
+            home: const MainShell(),
+          );
+        },
       ),
     );
   }
@@ -70,5 +93,3 @@ class _MainShellState extends State<MainShell> {
     );
   }
 }
-
-

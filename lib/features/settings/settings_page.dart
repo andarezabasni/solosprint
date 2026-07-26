@@ -1,58 +1,194 @@
 import 'package:flutter/material.dart';
-import 'goals_page.dart';
+import 'package:provider/provider.dart';
+import '../../core/theme_provider.dart';
+import '../../core/language_provider.dart';
+import '../../shared/localization.dart';
 import '../../shared/demo_data.dart';
+import 'goals_page.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
+      appBar: AppBar(title: Text(Strings.settings)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Goals
           Card(
             child: Column(
               children: [
                 ListTile(
                   leading: const Icon(Icons.flag_outlined, color: Color(0xFFFF6B35)),
-                  title: const Text('Goals'),
-                  subtitle: const Text('Set weekly and monthly targets'),
+                  title: Text(Strings.goals),
+                  subtitle: Text(Strings.goalsSubtitle),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const GoalsPage()),
-                    );
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.science_outlined, color: Color(0xFFFF6B35)),
-                  title: const Text('Load Demo Data'),
-                  subtitle: const Text('Add sample runs and goals for testing'),
-                  onTap: () async {
-                    await DemoData.loadAll();
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Demo data loaded! Check Home, History & Stats.')),
-                      );
-                    }
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.info_outline, color: Color(0xFFFF6B35)),
-                  title: const Text('About'),
-                  subtitle: const Text('SoloSprint v1.0.0'),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const GoalsPage()),
+                  ),
                 ),
               ],
             ),
           ),
+          const SizedBox(height: 12),
+
+          // Appearance
+          Card(
+            child: Column(
+              children: [
+                // Dark mode toggle
+                SwitchListTile(
+                  secondary: Icon(
+                    theme.isDark ? Icons.dark_mode : Icons.light_mode,
+                    color: const Color(0xFFFF6B35),
+                  ),
+                  title: Text(Strings.darkMode),
+                  value: theme.isDark,
+                  onChanged: (_) => theme.toggleTheme(),
+                  activeThumbColor: const Color(0xFFFF6B35),
+                ),
+                const Divider(height: 1, indent: 16, endIndent: 16),
+
+                // Language
+                ListTile(
+                  leading: const Icon(Icons.language, color: Color(0xFFFF6B35)),
+                  title: Text(Strings.language),
+                  subtitle: Text(Strings.languageSubtitle),
+                  trailing: Text(
+                    AppLocale.isEnglish ? 'EN' : 'ID',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFFF6B35),
+                    ),
+                  ),
+                  onTap: () => _showLanguageDialog(context),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Demo data
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.science_outlined, color: Color(0xFFFF6B35)),
+              title: Text(Strings.loadDemo),
+              subtitle: Text(Strings.loadDemoSubtitle),
+              onTap: () async {
+                await DemoData.loadAll();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(Strings.demoLoaded)),
+                  );
+                }
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Credits / Watermark
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.directions_run,
+                          color: Color(0xFFFF6B35), size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'SoloSprint',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    Strings.madeBy,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.camera_alt_outlined, size: 16, color: Colors.grey),
+                      const SizedBox(width: 6),
+                      Text(
+                        '@andarezabasni',
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.code, size: 16, color: Colors.grey),
+                      const SizedBox(width: 6),
+                      Text(
+                        'github.com/andarezabasni',
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'v1.0.0',
+                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  void _showLanguageDialog(BuildContext context) {
+    final lang = context.read<LanguageProvider>();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(Strings.selectLanguage),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.check_circle,
+                  color: lang.isEnglish ? const Color(0xFFFF6B35) : Colors.grey),
+              title: const Text('English'),
+              onTap: () {
+                lang.setEnglish();
+                Navigator.pop(ctx);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.check_circle,
+                  color: !lang.isEnglish ? const Color(0xFFFF6B35) : Colors.grey),
+              title: const Text('Bahasa Indonesia'),
+              onTap: () {
+                lang.setIndonesian();
+                Navigator.pop(ctx);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
