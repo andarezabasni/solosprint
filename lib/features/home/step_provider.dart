@@ -1,7 +1,7 @@
 import 'dart:async';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:pedometer/pedometer.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../../core/database/activity_database.dart';
 import '../../core/notification_service.dart';
 
@@ -49,25 +49,15 @@ class StepProvider extends ChangeNotifier {
     return result;
   }
 
-  /// Request activity recognition permission and start listening.
+  /// Start listening to pedometer (permission in AndroidManifest.xml).
   Future<void> startListening() async {
     _todayKey = _dateKey(DateTime.now());
     _todaySteps = ActivityDatabase.getGoal('saved_steps', defaultValue: 0).toInt();
 
-    // Request activity recognition permission (required on Android 10+)
-    if (await Permission.activityRecognition.request().isGranted) {
-      _hasPermission = true;
-    } else {
-      // Try requesting again
-      final status = await Permission.activityRecognition.request();
-      _hasPermission = status.isGranted;
-    }
-
-    if (!_hasPermission) {
-      debugPrint('StepProvider: Activity Recognition permission denied');
-      notifyListeners();
-      // Still try to listen - pedometer may work on older Androids
-    }
+    // Permission is declared in AndroidManifest.xml and handled by the OS.
+    // On Android 10+, the system prompts automatically when step sensor is first accessed.
+    // We catch any platform errors gracefully.
+    _hasPermission = true;
 
     _stepSubscription = Pedometer.stepCountStream.listen(
       (stepCount) => _processStepCount(stepCount.steps),

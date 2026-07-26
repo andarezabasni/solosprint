@@ -51,19 +51,19 @@ class PhotoTemplate extends StatelessWidget {
 
           // Logo + date (top)
           Positioned(
-            top: 60,
+            top: 50,
             left: 40,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const AppLogo(size: 36),
-                    const SizedBox(width: 12),
+                    const AppLogo(size: 52),
+                    const SizedBox(width: 14),
                     const Text('SoloSprint',
                         style: TextStyle(
                             color: Colors.white,
-                            fontSize: 28,
+                            fontSize: 36,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1.2,
                             shadows: [
@@ -71,11 +71,11 @@ class PhotoTemplate extends StatelessWidget {
                             ])),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 Text(ShareService.formatDate(activity.startTime),
                     style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 18,
+                        fontSize: 22,
                         shadows: [
                           Shadow(blurRadius: 3, color: Colors.black45)
                         ])),
@@ -88,8 +88,8 @@ class PhotoTemplate extends StatelessWidget {
             Positioned.fill(
               left: 60,
               right: 60,
-              top: 300,
-              bottom: 360,
+              top: 280,
+              bottom: 380,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: LayoutBuilder(
@@ -99,7 +99,7 @@ class PhotoTemplate extends StatelessWidget {
                       painter: _RoutePainter(
                         points: routePts,
                         color: const Color(0xFFFC4C02),
-                        strokeWidth: 16,
+                        strokeWidth: 12,
                       ),
                     );
                   },
@@ -111,7 +111,7 @@ class PhotoTemplate extends StatelessWidget {
           Positioned(
             left: 30,
             right: 30,
-            bottom: 100,
+            bottom: 70,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -155,7 +155,7 @@ class PhotoTemplate extends StatelessWidget {
             Text(value,
                 style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 34,
+                    fontSize: 42,
                     fontWeight: FontWeight.bold,
                     shadows: [
                       Shadow(blurRadius: 4, color: Colors.black54)
@@ -166,7 +166,7 @@ class PhotoTemplate extends StatelessWidget {
                 child: Text(unit,
                     style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 15,
+                        fontSize: 18,
                         shadows: [
                           Shadow(blurRadius: 3, color: Colors.black45)
                         ])),
