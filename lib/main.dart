@@ -8,6 +8,7 @@ import 'core/notification_service.dart';
 import 'shared/widgets/app_logo.dart';
 import 'features/home/home_page.dart';
 import 'features/home/step_provider.dart';
+import 'features/run/run_provider.dart';
 import 'features/run/run_page.dart';
 import 'features/history/history_page.dart';
 import 'features/stats/stats_page.dart';
@@ -49,6 +50,7 @@ class _SoloSprintAppState extends State<SoloSprintApp> {
         ChangeNotifierProvider.value(value: _themeProvider),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
         ChangeNotifierProvider(create: (_) => StepProvider()..startListening()),
+        ChangeNotifierProvider(create: (_) => RunProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, theme, _) {

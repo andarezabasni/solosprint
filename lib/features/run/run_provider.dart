@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:uuid/uuid.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'run_activity.dart';
 import 'route_point.dart';
 import '../../core/database/activity_database.dart';
@@ -16,6 +17,10 @@ class RunProvider extends ChangeNotifier {
   Timer? _timer;
   int _elapsedSeconds = 0;
   static const _uuid = Uuid();
+  static final _notif = FlutterLocalNotificationsPlugin();
+  static const _runChannelId = 'run_tracking';
+  static const _runChannelName = 'Run Tracking';
+  Timer? _notifTimer;
 
   bool get isTracking => _isTracking;
   bool get isPaused => _isPaused;
@@ -66,6 +71,21 @@ class RunProvider extends ChangeNotifier {
     final hasPermission = await requestPermission();
     if (!hasPermission) return;
 
+    // Ensure run tracking notification channel exists
+    try {
+      final android = _notif.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      await android?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          _runChannelId,
+          _runChannelName,
+          importance: Importance.low,
+          playSound: false,
+          enableVibration: false,
+        ),
+      );
+    } catch (_) {}
+
     _isTracking = true;
     _isPaused = false;
     _startTime = DateTime.now();
@@ -77,6 +97,9 @@ class RunProvider extends ChangeNotifier {
       _elapsedSeconds++;
       notifyListeners();
     });
+
+    _updateNotif();
+    _notifTimer = Timer.periodic(const Duration(seconds: 5), (_) => _updateNotif());
 
     _positionSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
@@ -106,8 +129,25 @@ class RunProvider extends ChangeNotifier {
   void pauseTracking() {
     if (!_isTracking || _isPaused) return;
     _isPaused = true;
+    _notifTimer?.cancel();
     _timer?.cancel();
     _positionSubscription?.pause();
+    // Show paused notification
+    _notif.show(
+      999,
+      'SoloSprint Paused',
+      '${_distance.toStringAsFixed(2)} km | ${_formatDuration(_elapsedSeconds)}',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _runChannelId,
+          _runChannelName,
+          importance: Importance.low,
+          priority: Priority.low,
+          ongoing: true,
+          showWhen: false,
+        ),
+      ),
+    );
     notifyListeners();
   }
 
@@ -119,6 +159,8 @@ class RunProvider extends ChangeNotifier {
       _elapsedSeconds++;
       notifyListeners();
     });
+    _notifTimer = Timer.periodic(const Duration(seconds: 5), (_) => _updateNotif());
+    _updateNotif();
 
     _positionSubscription?.resume();
     notifyListeners();
@@ -128,9 +170,13 @@ class RunProvider extends ChangeNotifier {
     _isTracking = false;
     _isPaused = false;
     _timer?.cancel();
+    _notifTimer?.cancel();
     _positionSubscription?.cancel();
     _timer = null;
+    _notifTimer = null;
     _positionSubscription = null;
+
+    _cancelNotif();
 
     final activity = RunActivity(
       id: _uuid.v4(),
@@ -156,10 +202,38 @@ class RunProvider extends ChangeNotifier {
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
+  void _updateNotif() {
+    final km = _distance.toStringAsFixed(2);
+    final dur = _formatDuration(_elapsedSeconds);
+    _notif.show(
+      999,
+      'SoloSprint Running',
+      '$km km | $dur',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _runChannelId,
+          _runChannelName,
+          importance: Importance.low,
+          priority: Priority.low,
+          ongoing: true,
+          showWhen: false,
+          autoCancel: false,
+          showProgress: false,
+        ),
+      ),
+    );
+  }
+
+  void _cancelNotif() {
+    _notif.cancel(999);
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
+    _notifTimer?.cancel();
     _positionSubscription?.cancel();
+    _cancelNotif();
     super.dispose();
   }
 }

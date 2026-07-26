@@ -11,10 +11,7 @@ class RunPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => RunProvider(),
-      child: const _RunPageBody(),
-    );
+    return const _RunPageBody();
   }
 }
 
@@ -164,7 +161,17 @@ class _RunPageBody extends StatelessWidget {
   Widget _buildStatMap(RunProvider provider) {
     final segments = provider.paceSegments;
     if (provider.route.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(color: Color(0xFFFF6B35)),
+            const SizedBox(height: 16),
+            Text('Waiting for GPS...',
+                style: TextStyle(color: Colors.grey[600])),
+          ],
+        ),
+      );
     }
 
     final lastPoint = provider.route.last.latLng;
