@@ -15,7 +15,7 @@ class ShareService {
     final boundary = previewKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
     if (boundary == null) throw Exception('Preview not ready');
 
-    final image = await boundary.toImage(pixelRatio: 3.0);
+    final image = await boundary.toImage(pixelRatio: 1.0);
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     if (byteData == null) throw Exception('Failed to render image');
 

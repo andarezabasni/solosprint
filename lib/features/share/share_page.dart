@@ -104,11 +104,21 @@ class _SharePageState extends State<SharePage> {
 
           const SizedBox(height: 8),
 
-          // Preview
+          // Preview — FittedBox ensures template renders at full 1080×1920
+          // but visually scaled to fit screen. Capture will be full resolution.
           Expanded(
-            child: RepaintBoundary(
-              key: ShareService.previewKey,
-              child: _buildPreview(),
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.contain,
+                child: RepaintBoundary(
+                  key: ShareService.previewKey,
+                  child: SizedBox(
+                    width: 1080,
+                    height: 1920,
+                    child: _buildPreview(),
+                  ),
+                ),
+              ),
             ),
           ),
 
