@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pedometer/pedometer.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../core/database/activity_database.dart';
 import '../../core/notification_service.dart';
 
@@ -13,23 +14,21 @@ class StepProvider extends ChangeNotifier {
   StreamSubscription<PedestrianStatus>? _statusSubscription;
   Timer? _saveTimer;
   String _todayKey = '';
+  bool _hasPermission = false;
 
-  static const _maxStepRate = 4;
-  static const _minStepRate = 0.5;
-  int _consecutiveValid = 0;
+  static const _maxStepRate = 4; // >4 steps/sec = vehicle
+  int _readingsSinceReset = 0;
   int _lastNotifCheckSteps = -1;
 
   int get todaySteps => _todaySteps;
   String get status => _status;
+  bool get hasPermission => _hasPermission;
 
-  /// Get daily steps for any date key ('YYYY-MM-DD').
   int getStepsForDay(String dateKey) => ActivityDatabase.getDailySteps(dateKey);
 
-  /// Get last 7 days step data (for weekly summary).
   Map<String, int> get lastWeekSteps {
     final result = <String, int>{};
     final now = DateTime.now();
-    // Start from Monday of current week
     final monday = now.subtract(Duration(days: now.weekday - 1));
     for (int i = 0; i < 7; i++) {
       final d = monday.add(Duration(days: i));
@@ -39,7 +38,6 @@ class StepProvider extends ChangeNotifier {
     return result;
   }
 
-  /// Get step data for a specific week by its Monday date.
   Map<String, int> getWeekSteps(DateTime monday) {
     final result = <String, int>{};
     final now = _dateKey(DateTime.now());
@@ -51,11 +49,25 @@ class StepProvider extends ChangeNotifier {
     return result;
   }
 
-  void startListening() {
+  /// Request activity recognition permission and start listening.
+  Future<void> startListening() async {
     _todayKey = _dateKey(DateTime.now());
-
-    // Restore today's saved steps (survives app restart within same day)
     _todaySteps = ActivityDatabase.getGoal('saved_steps', defaultValue: 0).toInt();
+
+    // Request activity recognition permission (required on Android 10+)
+    if (await Permission.activityRecognition.request().isGranted) {
+      _hasPermission = true;
+    } else {
+      // Try requesting again
+      final status = await Permission.activityRecognition.request();
+      _hasPermission = status.isGranted;
+    }
+
+    if (!_hasPermission) {
+      debugPrint('StepProvider: Activity Recognition permission denied');
+      notifyListeners();
+      // Still try to listen - pedometer may work on older Androids
+    }
 
     _stepSubscription = Pedometer.stepCountStream.listen(
       (stepCount) => _processStepCount(stepCount.steps),
@@ -76,24 +88,25 @@ class StepProvider extends ChangeNotifier {
       },
     );
 
-    // Save every 30 seconds
     _saveTimer = Timer.periodic(const Duration(seconds: 30), (_) => _save());
   }
 
   void _processStepCount(int rawSteps) {
-    // Check for day change
+    // Day change detection
     final newKey = _dateKey(DateTime.now());
     if (newKey != _todayKey) {
-      // Day changed — save previous day and reset
       ActivityDatabase.saveDailySteps(_todayKey, _todaySteps);
       _todayKey = newKey;
       _todaySteps = 0;
       _lastRawSteps = -1;
+      _readingsSinceReset = 0;
     }
 
+    // First reading: store baseline, don't count
     if (_lastRawSteps < 0) {
       _lastRawSteps = rawSteps;
       _lastStepTime = DateTime.now();
+      _readingsSinceReset = 1;
       return;
     }
 
@@ -107,27 +120,19 @@ class StepProvider extends ChangeNotifier {
     if (deltaSteps <= 0) return;
 
     final rate = deltaSteps / (deltaMs / 1000.0);
+    _readingsSinceReset++;
 
-    // Vehicle filter: >4 steps/sec
-    if (rate > _maxStepRate) {
-      _consecutiveValid = 0;
+    // Vehicle filter: only apply after first few readings
+    if (_readingsSinceReset > 3 && rate > _maxStepRate) {
+      debugPrint('StepProvider: vehicle rate detected ($rate/s), ignoring');
       notifyListeners();
       return;
     }
 
-    // Noise filter: too slow
-    if (rate < _minStepRate && deltaSteps < 3) {
-      _consecutiveValid = 0;
-      return;
-    }
-
-    _consecutiveValid++;
-    if (_consecutiveValid >= 3) {
-      _todaySteps += deltaSteps;
-      if (_todaySteps > 100000) _todaySteps = 100000;
-      _checkNotification();
-    }
-
+    // Accept steps immediately after first baseline reading
+    _todaySteps += deltaSteps;
+    if (_todaySteps > 100000) _todaySteps = 100000;
+    _checkNotification();
     notifyListeners();
   }
 
@@ -156,13 +161,13 @@ class StepProvider extends ChangeNotifier {
   void resetSteps() {
     _todaySteps = 0;
     _lastRawSteps = -1;
+    _readingsSinceReset = 0;
     ActivityDatabase.saveGoal('saved_steps', 0);
     ActivityDatabase.saveDailySteps(_todayKey, 0);
     notifyListeners();
   }
 
   void _checkNotification() {
-    // Only check every 500 steps to avoid spam
     if ((_todaySteps - _lastNotifCheckSteps).abs() < 500) return;
     _lastNotifCheckSteps = _todaySteps;
     NotificationService.checkAndNotify(_todaySteps);
